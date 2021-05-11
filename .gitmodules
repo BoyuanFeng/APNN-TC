@@ -1,3 +1,6 @@
 [submodule "cutlass"]
 	path = cutlass
 	url = git@github.com:NVIDIA/cutlass.git
+[submodule "Bench_CUTLASS_A100"]
+	path = Bench_CUTLASS_A100
+	url = git@github.com:YukeWang96/Bench_CUTLASS_A100.git
