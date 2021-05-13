@@ -61,8 +61,8 @@ fp32 data by using NVIDIA Ampere architecture.
 
 // #define BIT_WIDTH 32
 // #define BIT_WIDTH 16
-#define BIT_WIDTH 8
-// #define BIT_WIDTH 4
+// #define BIT_WIDTH 8
+#define BIT_WIDTH 4
 // #define BIT_WIDTH 1
 
 #if BIT_WIDTH == 32
@@ -77,7 +77,8 @@ fp32 data by using NVIDIA Ampere architecture.
   typedef int8_t output_t;
 #elif BIT_WIDTH == 4
   typedef cutlass::int4b_t input_t;
-  typedef int32_t output_t;
+  // typedef int32_t output_t;
+  typedef cutlass::int4b_t output_t;
 #elif BIT_WIDTH == 1
   typedef cutlass::uint1b_t input_t;
   typedef int32_t output_t;
@@ -199,9 +200,34 @@ using Gemm = cutlass::gemm::device::Gemm<
 //-------------INT-4 Tensor core (PASS) --------------------
 #elif BIT_WIDTH == 4
 
-using ElementOutput = int32_t;
-using ElementAccumulator = int32_t;
-using ElementCompute = int32_t;
+// using ElementOutput = int32_t;
+// using ElementAccumulator = int32_t;
+// using ElementCompute = int32_t;
+
+// using Gemm = cutlass::gemm::device::Gemm<
+//   cutlass::int4b_t,
+//   cutlass::layout::RowMajor,
+//   cutlass::int4b_t,
+//   cutlass::layout::ColumnMajor,
+//   ElementOutput,
+//   cutlass::layout::RowMajor,
+//   ElementAccumulator,
+//   cutlass::arch::OpClassTensorOp,
+//   cutlass::arch::Sm80,
+//   cutlass::gemm::GemmShape<128, 256, 128>,
+//   cutlass::gemm::GemmShape<64, 64, 128>,
+//   cutlass::gemm::GemmShape<8, 8, 32>,
+//   cutlass::epilogue::thread::LinearCombinationClamp<
+//     ElementOutput,
+//     128 / cutlass::sizeof_bits<ElementOutput>::value,
+//     ElementAccumulator,
+//     ElementCompute
+//   >,
+//   cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
+//   2
+// >;
+
+using ElementCompute = float;
 
 using Gemm = cutlass::gemm::device::Gemm<
   cutlass::int4b_t,
@@ -210,21 +236,22 @@ using Gemm = cutlass::gemm::device::Gemm<
   cutlass::layout::ColumnMajor,
   ElementOutput,
   cutlass::layout::RowMajor,
-  ElementAccumulator,
+  int32_t,
   cutlass::arch::OpClassTensorOp,
   cutlass::arch::Sm80,
-  cutlass::gemm::GemmShape<128, 256, 128>,
-  cutlass::gemm::GemmShape<64, 64, 128>,
+  cutlass::gemm::GemmShape<64, 128, 128>,
+  cutlass::gemm::GemmShape<32, 64, 128>,
   cutlass::gemm::GemmShape<8, 8, 32>,
   cutlass::epilogue::thread::LinearCombinationClamp<
     ElementOutput,
-    128 / cutlass::sizeof_bits<ElementOutput>::value,
-    ElementAccumulator,
+    64 / cutlass::sizeof_bits<ElementOutput>::value,
+    int32_t,
     ElementCompute
   >,
   cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
   2
 >;
+
 
 //-------------INT-1 Tensor core (PASS)--------------------
 #elif BIT_WIDTH == 1
@@ -365,7 +392,7 @@ MLP_hidden_layer(int M, int N, int K, cutlass::TensorRef<out_Element_, out_Layou
   cudaMalloc(&d_c, M*N*sizeof(out_Element_)); 
   cudaMalloc(&d_d, M*N*sizeof(out_Element_)); 
   
-  auto a_tensor_ref = cutlass::TensorRef<ElementInputA,LayoutInputA>(d_a); 
+  // auto a_tensor_ref = cutlass::TensorRef<ElementInputA,LayoutInputA>(d_a); 
   auto b_tensor_ref = cutlass::TensorRef<ElementInputB,LayoutInputB>(d_b); 
   auto c_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput>(d_c); 
   auto d_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput>(d_d); 
@@ -380,7 +407,7 @@ MLP_hidden_layer(int M, int N, int K, cutlass::TensorRef<out_Element_, out_Layou
   // Create a tuple of gemm kernel arguments. This is later passed as arguments to launch
   // instantiated CUTLASS kernel
   typename Gemm::Arguments arguments{problem_size,  // <- problem size of matrix multiplication
-                                     a_tensor_ref,
+                                     last_tensor_ref,
                                      b_tensor_ref,
                                      c_tensor_ref,
                                      d_tensor_ref,
