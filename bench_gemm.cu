@@ -52,7 +52,6 @@ fp32 data by using NVIDIA Ampere architecture.
 #include "helper.h"
 #include <cutlass/numeric_types.h>
 
-#define NUM_PROFILE 200 
 
 #define PAD32(x)                \
 (                               \
@@ -60,6 +59,7 @@ fp32 data by using NVIDIA Ampere architecture.
 )
 
 
+// #define BIT_WIDTH 32
 // #define BIT_WIDTH 16
 // #define BIT_WIDTH 8
 // #define BIT_WIDTH 4
@@ -89,7 +89,7 @@ using ElementAccumulator = output_t;                   // <- data type of accumu
 using ElementComputeEpilogue = output_t;               // <- data type of epilogue operations
 using ElementInputA = input_t;                        // <- data type of elements in input matrix A
 using ElementInputB = input_t;                        // <- data type of elements in input matrix B
-using ElementOutput = output_t;                        // <- data type of elements in output matrix D
+using ElementOutput = output_t;                       // <- data type of elements in output matrix D
 
 
 // The code section below describes matrix layout of input and output matrices. Column Major for
@@ -238,21 +238,17 @@ using Gemm = cutlass::gemm::device::Gemm<
 
 
 
-
-
-
-
-
-
-
-int run(int M, int N, int K) {
-
-  int length_m = M;
-  int length_n = N;
-  int length_k = K;
+template <
+  /// Data type of element stored within tensor (concept: NumericType)
+  typename out_Element_,
+  /// Defines a mapping from logical coordinate to linear memory (concept: Layout)
+  typename out_Layout_
+>
+cutlass::TensorRef<out_Element_, out_Layout_> 
+MLP_input_layer(int M, int N, int K) {
 
   // Create a tuple of problem size for matrix multiplication
-  cutlass::gemm::GemmCoord problem_size(length_m, length_n, length_k);
+  cutlass::gemm::GemmCoord problem_size(M, N, K);
 
   // Initialize tensors using CUTLASS helper functions
   cutlass::HostTensor<ElementInputA, LayoutInputA> tensor_a(
@@ -282,10 +278,9 @@ int run(int M, int N, int K) {
   // Split K dimension into 1 partitions
   int split_k_slices = 1;
 
-
   // Create a tuple of gemm kernel arguments. This is later passed as arguments to launch
   // instantiated CUTLASS kernel
-  typename Gemm::Arguments arguments{problem_size,  // <- problem size of matrix multiplication
+  typename Gemm::Arguments arguments{problem_size,           // <- problem size of matrix multiplication
                                      tensor_a.device_ref(),  // <- reference to matrix A on device
                                      tensor_b.device_ref(),  // <- reference to matrix B on device
                                      tensor_c.device_ref(),  // <- reference to matrix C on device
@@ -312,8 +307,89 @@ int run(int M, int N, int K) {
   cudaEventRecord(start);
 
   // Launch initialized CUTLASS kernel
+  #define NUM_PROFILE 1 
   for(int trial = 0; trial < NUM_PROFILE; trial++) {
-    // printf("[%d]\n", trial);
+    status = gemm_op();
+    CUTLASS_CHECK(status);
+  }
+
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
+  printf("CUTLASS-GEMM (%d-bit). M: %6d, N: %6d, K: %6d,\t Time (ms): %.2f, TOPS: %4.2f\t\n", BIT_WIDTH, M, N, K, milliseconds/NUM_PROFILE,
+                                                static_cast<double>(NUM_PROFILE*(static_cast<double>(M)*N*K*2) /
+                                               (milliseconds / 1000.)) / 1e12);
+  return tensor_d.device_ref();
+}
+
+
+template <
+  /// Data type of element stored within tensor (concept: NumericType)
+  typename out_Element_,
+  /// Defines a mapping from logical coordinate to linear memory (concept: Layout)
+  typename out_Layout_
+>
+cutlass::TensorRef<out_Element_, out_Layout_> 
+MLP_hidden_layer(int M, int N, int K, cutlass::TensorRef<out_Element_, out_Layout_>& last_tensor_ref) {
+
+  // Create a tuple of problem size for matrix multiplication
+  cutlass::gemm::GemmCoord problem_size(M, N, K);
+
+  ElementInputA* d_a;
+  ElementInputB* d_b; 
+  out_Element_* d_c; 
+  out_Element_* d_d; 
+
+  cudaMalloc(&d_a, M*K*sizeof(ElementInputA)); 
+  cudaMalloc(&d_b, K*N*sizeof(ElementInputB)); 
+  cudaMalloc(&d_c, M*N*sizeof(out_Element_)); 
+  cudaMalloc(&d_d, M*N*sizeof(out_Element_)); 
+  
+  auto a_tensor_ref = cutlass::TensorRef<ElementInputA,LayoutInputA>(d_a); 
+  auto b_tensor_ref = cutlass::TensorRef<ElementInputB,LayoutInputB>(d_b); 
+  auto c_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput>(d_c); 
+  auto d_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput>(d_d); 
+
+  // Initialize alpha and beta for dot product computation
+  ElementComputeEpilogue alpha = ElementComputeEpilogue(1);
+  ElementComputeEpilogue beta = ElementComputeEpilogue(0);
+
+  // Split K dimension into 1 partitions
+  int split_k_slices = 1;
+
+  // Create a tuple of gemm kernel arguments. This is later passed as arguments to launch
+  // instantiated CUTLASS kernel
+  typename Gemm::Arguments arguments{problem_size,  // <- problem size of matrix multiplication
+                                     a_tensor_ref,
+                                     b_tensor_ref,
+                                     c_tensor_ref,
+                                     d_tensor_ref,
+                                     {alpha, beta},          // <- tuple of alpha and beta
+                                     split_k_slices};        // <- k-dimension split factor
+
+  // Using the arguments, query for extra workspace required for matrix multiplication computation
+  size_t workspace_size = Gemm::get_workspace_size(arguments);
+
+  // Allocate workspace memory
+  cutlass::device_memory::allocation<uint8_t> workspace(workspace_size);
+
+  // Instantiate CUTLASS kernel depending on templates
+  Gemm gemm_op;
+
+  // Initialize CUTLASS kernel with arguments and workspace pointer
+  cutlass::Status status = gemm_op.initialize(arguments, workspace.get());
+  CUTLASS_CHECK(status);
+
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+  cudaEventRecord(start);
+
+  // Launch initialized CUTLASS kernel
+  #define NUM_PROFILE 1 
+  for(int trial = 0; trial < NUM_PROFILE; trial++) {
     status = gemm_op();
     CUTLASS_CHECK(status);
   }
@@ -327,7 +403,7 @@ int run(int M, int N, int K) {
                                                 static_cast<double>(NUM_PROFILE*(static_cast<double>(M)*N*K*2) /
                                                (milliseconds / 1000.)) / 1e12);
 
-    /*
+  /*
   // Create instantiation for device reference gemm kernel
   cutlass::reference::device::Gemm<ElementInputA,
                                    LayoutInputA,
@@ -362,26 +438,11 @@ int run(int M, int N, int K) {
   std::cout << (passed ? "Passed" : "Failed") << std::endl;
 
   // return (passed ? 0  : -1);*/
-  return 0;
+  // return 0;
+  return d_tensor_ref;
 }
-
-
-int MLP_layer(int batch_size, int in_channel, int out_channels){
-  run(batch_size, out_channels, in_channel);
-}
-
-
 
 int main(int argc, char* argv[]) {
-
-  // if (argc < 2){
-  //   printf("Usage: ./prog Dim\n");
-  //   return -1;
-  // }
-
-  // int M = atoi(argv[1]);
-  // int N = atoi(argv[2]);
-  // int K = atoi(argv[3]);
 
   bool notSupported = false;
 
@@ -422,10 +483,10 @@ int main(int argc, char* argv[]) {
      {1024, 10  }
     };
 
-  for (auto config: MLP_layers_config){
-    MLP_layer(batch_size, PAD32(config[0]), PAD32(config[1]));
+  auto out = MLP_input_layer<ElementOutput, LayoutOutput>(batch_size, PAD32(MLP_layers_config[0][1]), PAD32(MLP_layers_config[0][0]));
+  for (int i = 1; i < MLP_layers_config.size(); i++){
+      out = MLP_hidden_layer<ElementOutput, LayoutOutput>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
   }
 
   return 0;
-  // return run(M, N, K);
 }
