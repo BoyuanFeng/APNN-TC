@@ -123,17 +123,9 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 #include "cutlass/util/tensor_view_io.h"
 
 #include "helper.h"
+#include "gemm.cuh"
 
-// #define vgg_small
-// #define ResNet20
-#define AlexNet
-// #define vgg_variant
-// #define ResNet18
-// #define profile
-
-// #define batch_1
-#define batch_8
-// #define batch_512
+#define batch_size 8
 
 // #define BIT_WIDTH 16
 // #define BIT_WIDTH 8
@@ -861,183 +853,40 @@ int main(int argc, char const **args) {
     return 0;
   }
 
-  options.benchmark = true;
-  if (options.benchmark) {
-    // Benchmark several layers
+  struct Benchmark {
+    int h, w, c, k, r, s;
+  } layers[] = {
+    // AlexNet (imageNet)
+    {224,224,32,64,11,11},
+    {28,28,64,192,5,5},
+    {14,14,192,384,3,3},
+    {14,14,384,256,3,3},
+    {14,14,256,256,3,3},
+  };
 
-    #ifdef batch_1
-    int batch_sizes[] = {1}; //{1, 32, 64, 128, 256, 512};
-    #endif
+  Result::print_header(std::cout, options) << std::endl;
 
-    #ifdef batch_8
-    int batch_sizes[] = {8}; //{1, 32, 64, 128, 256, 512};
-    #endif
+  // run convolution layers
+  int idx = 1;
+  for (auto const &layer : layers) {
 
-    #ifdef batch_256
-    int batch_sizes[] = {256}; //{1, 32, 64, 128, 256, 512};
-    #endif
+      options.update({batch_size, layer.h, layer.w, layer.c}, {layer.k, layer.r, layer.s, layer.c});
 
-    #ifdef batch_512
-    int batch_sizes[] = {512}; //{1, 32, 64, 128, 256, 512};
-    #endif
+      Result result = profile_convolution(options);
+      result.print(std::cout, idx, options) << std::endl;
+      ++idx;
+  }
 
-    struct Benchmark {
-      int h, w, c, k, r, s;
-    } layers[] = {
-
-      #ifdef profile
-      {16,16,128,128,3,3},
-      {16,16,256,256,3,3},
-      {16,16,384,384,3,3},
-      {16,16,512,512,3,3},
-      {16,16,640,640,3,3},
-      {16,16,768,768,3,3},
-      {16,16,896,896,3,3},
-      {16,16,1024,1024,3,3},
-      #endif
-
-      #ifdef vgg_small
-      // vgg-small (CIFAR-10)
-      { 32, 32, 32, 128, 3, 3},       // in_channel from 3 --> 32
-      { 32, 32, 128, 128, 3, 3},
-      { 16, 16, 128, 256, 3, 3},
-      { 16, 16, 256, 256, 3, 3},
-      { 8, 8, 256, 512, 3, 3},
-      { 8, 8, 512, 512, 3, 3},
-      #endif
-
-      // ResNet20 (CIFAR-10)
-      #ifdef ResNet20
-      { 32, 32, 32, 16, 3, 3},     // in_channel from 3 to 32
-
-      { 32, 32, 16, 16, 3, 3},
-      { 32, 32, 16, 16, 3, 3},
-      { 32, 32, 16, 16, 3, 3},
-      { 32, 32, 16, 16, 3, 3},
-      { 32, 32, 16, 16, 3, 3},
-      { 32, 32, 16, 16, 3, 3},
-
-      { 16, 16, 16, 32, 3, 3},
-      { 16, 16, 32, 32, 3, 3},
-      { 16, 16, 32, 32, 3, 3},
-      { 16, 16, 32, 32, 3, 3},
-      { 16, 16, 32, 32, 3, 3},
-      { 16, 16, 32, 32, 3, 3},
-
-      { 8, 8, 32, 64, 3, 3},
-      { 8, 8, 64, 64, 3, 3},
-      { 8, 8, 64, 64, 3, 3},
-      { 8, 8, 64, 64, 3, 3},
-      { 8, 8, 64, 64, 3, 3},
-      { 8, 8, 64, 64, 3, 3},
-      #endif
-
-      #ifdef AlexNet
-      // AlexNet (imageNet)
-      {224,224,128,128,11,11},
-      {28,28,128,256,5,5},
-      {14,14,256,384,3,3},
-      {14,14,384,256,3,3},
-      {14,14,256,256,3,3},
-
-      // {224,224,32,64,11,11},
-      // {28,28,64,192,5,5},
-      // {14,14,192,384,3,3},
-      // {14,14,384,256,3,3},
-      // {14,14,256,256,3,3},
-      #endif
-
-      #ifdef vgg_variant
-      // VGG-Variant (ImageNeT)
-      {224,224,128,128,7,7},
-      {55,55,128,256,3,3},
-      // {224,224,32,96,7,7},
-      // {55,55,96,256,3,3},
-
-      {55,55,256,256,3,3},
-      {55,55,256,256,3,3},
-
-      {27,27,256,512,3,3},
-      {27,27,512,512,3,3},
-      {27,27,512,512,3,3},
-
-      {13,13,512,512,3,3},
-      {13,13,512,512,3,3},
-      {13,13,512,512,3,3},
-      #endif
-
-      // {32,32,128,256,3,3},          // channel >= 128 for INT1
-
-      #ifdef ResNet18
-      // ResNet18 (imageNet)
-
-      {224,224,128,128,7,7},      // 3 --> 32 for running conv
-      {56,56,128,128,3,3},
-      {56,56,128,128,3,3},
-      {56,56,128,128,3,3},
-      {56,56,128,128,3,3},
-      {56,56,128,128,3,3},
-      {28,28,128,128,3,3},
-      {28,28,128,128,3,3},
-      {28,28,128,128,3,3},
-      {28,28,128,256,3,3},
-      {14,14,256,256,3,3},
-      {14,14,256,256,3,3},
-      {14,14,256,256,3,3},
-      {14,14,256,512,3,3},
-      {7,7,512,512,3,3},
-      {7,7,512,512,3,3},
-      {7,7,512,512,3,3},
-
-
-      // {224,224,32,64,7,7},      // 3 --> 32 for running conv
-      // {56,56,64,64,3,3},
-      // {56,56,64,64,3,3},
-      // {56,56,64,64,3,3},
-      // {56,56,64,64,3,3},
-      // {56,56,64,128,3,3},
-      // {28,28,128,128,3,3},
-      // {28,28,128,128,3,3},
-      // {28,28,128,128,3,3},
-      // {28,28,128,256,3,3},
-      // {14,14,256,256,3,3},
-      // {14,14,256,256,3,3},
-      // {14,14,256,256,3,3},
-      // {14,14,256,512,3,3},
-      // {7,7,512,512,3,3},
-      // {7,7,512,512,3,3},
-      // {7,7,512,512,3,3},
-      #endif
+  std::vector<std::vector<int>> MLP_layers_config = 
+    {
+     {256*6*6,  4096},
+     {4096, 4096},
+     {4096, 1000},
     };
 
-    Result::print_header(std::cout, options) << std::endl;
-
-    int idx = 1;
-
-    for (auto const &layer : layers) {
-      for (auto N : batch_sizes) {
-
-        options.update({N, layer.h, layer.w, layer.c}, {layer.k, layer.r, layer.s, layer.c});
-
-        Result result = profile_convolution(options);
-        result.print(std::cout, idx, options) << std::endl;
-      }
-      ++idx;
-      // printf("idx: %d\n", idx);
-    }
-  }
-  else {
-
-    // Execute one problem size
-    if (!options.valid()) {
-      std::cerr << "Invalid problem." << std::endl;
-      return -1;
-    }
-
-    Result result = profile_convolution(options);
-
-    Result::print_header(std::cout, options) << std::endl;
-    result.print(std::cout, 1, options) << std::endl;
+  auto out = MLP_input_layer<cutlass::int4b_t, cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[0][1]), PAD32(MLP_layers_config[0][0]));
+  for (int i = 1; i < MLP_layers_config.size(); i++){
+      out = MLP_hidden_layer<cutlass::int4b_t , cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
   }
 
   return 0;
