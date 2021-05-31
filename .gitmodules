@@ -7,3 +7,6 @@
 [submodule "cudnn_sample_v8"]
 	path = cudnn_sample_v8
 	url = git@github.com:YukeWang96/cudnn_sample_v8.git
+[submodule "TCBNN"]
+	path = TCBNN
+	url = git@github.com:YukeWang96/TCBNN-SC21.git
