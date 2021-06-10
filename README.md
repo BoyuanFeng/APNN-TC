@@ -11,6 +11,7 @@ git clone git@github.com:YukeWang96/APNN_TC_sc21.git
 + `gcc >= 7.5`
 + `make >= 4.2.1`
 + `CUDA >= 11.0`
++ `libjpeg`
 
 # Files & Directory
 + `cutlass_baselines/`: CUTLASS baselines NN models, including FP21, FP16, and INT8.
