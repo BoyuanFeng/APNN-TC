@@ -1,4 +1,6 @@
-INC = -I../cutlass/include -I../cutlass/tools/util/include -Icutlass/examples/common
+INC = 	-I../cutlass/include \
+		-I../cutlass/tools/util/include \
+		-I../cutlass/examples/common
 FLAG = -std=c++11 -O3 -w -arch=sm_86 
 
 all: alexnet
