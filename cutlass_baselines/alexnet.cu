@@ -124,18 +124,12 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 
 #include "helper.h"
 #include "gemm.cuh"
-
-#define batch_size 8
-
-// #define BIT_WIDTH 16
-// #define BIT_WIDTH 8
-#define BIT_WIDTH 4
-// #define BIT_WIDTH 1
+#include "config.h"
 
 #if BIT_WIDTH == 32
 using ElementInputA           = float;
 using ElementInputB           = float;
-using ElementOutput           = float;
+// using ElementOutput           = float;
 using ElementAccumulator      = float;
 using ElementCompute          = float;
 using ElementComputeEpilogue = ElementAccumulator;
@@ -175,7 +169,7 @@ using LayoutOutput = cutlass::layout::TensorNHWC;
 #if BIT_WIDTH == 16
 using ElementInputA           = cutlass::half_t;
 using ElementInputB           = cutlass::half_t;
-using ElementOutput           = float;
+// using ElementOutput           = float;
 using ElementAccumulator      = float;
 using ElementCompute          = float;
 using ElementComputeEpilogue = ElementAccumulator;
@@ -219,7 +213,7 @@ using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
 
 using ElementInputA           = int8_t;
 using ElementInputB           = int8_t;
-using ElementOutput           = int32_t;
+// using ElementOutput           = int32_t;
 using ElementAccumulator = int32_t;                   // Data type of accumulator
 using ElementComputeEpilogue = ElementAccumulator;    // Data type of epilogue computation (alpha, beta)
 
@@ -884,9 +878,9 @@ int main(int argc, char const **args) {
      {4096, 1000},
     };
 
-  auto out = MLP_input_layer<cutlass::int4b_t, cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[0][1]), PAD32(MLP_layers_config[0][0]));
+  auto out = MLP_input_layer<ElementInputA, cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[0][1]), PAD32(MLP_layers_config[0][0]));
   for (int i = 1; i < MLP_layers_config.size(); i++){
-      out = MLP_hidden_layer<cutlass::int4b_t , cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
+      out = MLP_hidden_layer<ElementInputA , cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
   }
 
   return 0;

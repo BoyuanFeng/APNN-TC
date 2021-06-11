@@ -12,21 +12,15 @@
 #include "cutlass/util/reference/host/tensor_copy.h"
 #include "cutlass/util/reference/host/tensor_fill.h"
 #include "cutlass/util/tensor_view_io.h"
-#include "helper.h"
 #include <cutlass/numeric_types.h>
 
+#include "helper.h"
+#include "config.h"
 
 #define PAD32(x)                \
 (                               \
   (((x + 32 - 1)/32)*32)        \ 
 )
-
-
-// #define BIT_WIDTH 32
-// #define BIT_WIDTH 16
-// #define BIT_WIDTH 8
-#define BIT_WIDTH 4
-// #define BIT_WIDTH 1
 
 #if BIT_WIDTH == 32
   typedef float input_t;
