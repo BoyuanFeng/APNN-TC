@@ -122,6 +122,7 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 #include "cutlass/util/reference/host/convolution.h"
 #include "cutlass/util/tensor_view_io.h"
 
+#include "gemm.cuh"
 #include "helper.h"
 #include "config.h"
 
@@ -631,7 +632,6 @@ int main(int argc, char const **args) {
   }
 
   options.benchmark = true;
-  if (options.benchmark) {
     // Benchmark several layers
 
     struct Benchmark {
@@ -665,20 +665,19 @@ int main(int argc, char const **args) {
         result.print(std::cout, idx, options) << std::endl;
         ++idx;
     }
+
+
+    std::vector<std::vector<int>> MLP_layers_config = 
+    {
+     {25088,  4096},
+     {4096, 4096},
+     {4096, 1000},
+    };
+
+  auto out = MLP_input_layer<ElementInputA, cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[0][1]), PAD32(MLP_layers_config[0][0]));
+  for (int i = 1; i < MLP_layers_config.size(); i++){
+      out = MLP_hidden_layer<ElementInputA , cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
   }
-  else {
-    // Execute one problem size
-    if (!options.valid()) {
-      std::cerr << "Invalid problem." << std::endl;
-      return -1;
-    }
-
-    Result result = profile_convolution(options);
-
-    Result::print_header(std::cout, options) << std::endl;
-    result.print(std::cout, 1, options) << std::endl;
-  }
-
   return 0;
 }
 

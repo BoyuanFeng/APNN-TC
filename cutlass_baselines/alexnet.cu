@@ -666,7 +666,6 @@ int main(int argc, char const **args) {
   for (int i = 1; i < MLP_layers_config.size(); i++){
       out = MLP_hidden_layer<ElementInputA , cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
   }
-
   return 0;
 }
 

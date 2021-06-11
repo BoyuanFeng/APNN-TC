@@ -280,6 +280,7 @@ class Fc128LayerParam
         }
         Fc128LayerParam* initialize(FILE* config_file, uin32* prev_layer_gpu)
         {
+            printf("weight_height, %d, weight_width: %d\n", weight_height, weight_width);
             //Process weight
             SAFE_ALOC_HOST(weight, weight_bytes());
             launch_array(config_file, this->weight, weight_size());

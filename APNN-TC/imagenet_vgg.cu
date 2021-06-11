@@ -142,7 +142,7 @@ int main()
     //         filter_height, filter_width, 3, 64, batch); 
     // InConv128LayerParam* bconv1_gpu = bconv1->initialize(images, config_file);
 
-    uint32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
+    uin32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
     Conv128LayerParam* bconv1 = new Conv128LayerParam("Conv1", image_height, image_width, 
         filter_height, filter_width, 3, 64, batch); 
     Conv128LayerParam* bconv1_gpu = bconv1->initialize(config_file, lowBit_image_gpu);

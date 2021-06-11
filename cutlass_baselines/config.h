@@ -19,11 +19,11 @@
 
 #define batch_size 8
 
-#define BIT_WIDTH 32
+// #define BIT_WIDTH 32
 // #define BIT_WIDTH 16
-// #define BIT_WIDTH 8
-// #define BIT_WIDTH 4
-// #define BIT_WIDTH 1
+#define BIT_WIDTH 8
+// //#define BIT_WIDTH 4
+// //#define BIT_WIDTH 1
 
 #if BIT_WIDTH == 32
   typedef float input_t;
