@@ -126,13 +126,6 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 #include "gemm.cuh"
 #include "config.h"
 
-
-
-using ImplicitGemm = cutlass::conv::device::ImplicitGemmConvolution<Conv2dFpropKernel>;
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
 // Command line options parsing
 struct Options {
 

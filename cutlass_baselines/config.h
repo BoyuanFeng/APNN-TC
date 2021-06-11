@@ -397,6 +397,8 @@ using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
 >::Kernel;
 #endif  // END if BIT_WIDTH == 1
 
+using ImplicitGemm = cutlass::conv::device::ImplicitGemmConvolution<Conv2dFpropKernel>;
+
 #define PAD32(x)                \
 (                               \
   (((x + 32 - 1)/32)*32)        \ 
