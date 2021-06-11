@@ -17,6 +17,7 @@
 #define PARAM_H
 
 #include "utility.h"
+#define NN_INFO
 
 const int dev=0;
 
@@ -280,7 +281,10 @@ class Fc128LayerParam
         }
         Fc128LayerParam* initialize(FILE* config_file, uin32* prev_layer_gpu)
         {
-            printf("weight_height, %d, weight_width: %d\n", weight_height, weight_width);
+            #ifdef NN_INFO
+            printf("%d,%d\n", weight_height, weight_width);
+            #endif
+
             //Process weight
             SAFE_ALOC_HOST(weight, weight_bytes());
             launch_array(config_file, this->weight, weight_size());
@@ -449,6 +453,10 @@ class Out128LayerParam
 
         Out128LayerParam* initialize(FILE* config_file, uin32* prev_layer_gpu)
         {
+            #ifdef NN_INFO
+            printf("%d, %d\n", weight_height, weight_width);
+            #endif
+
             SAFE_ALOC_HOST(weight, weight_bytes());
             launch_array(config_file, this->weight, weight_size());
             SAFE_ALOC_GPU(weight_gpu, weight_bit_bytes());
@@ -745,7 +753,7 @@ class InConv128LayerParam
         }
         int input_size() { return input_channels*input_height*input_width*batch;}
         int input_bytes() { return input_size()*sizeof(float);}
-        int input_bit_size() { return  input_channels*input_height*input_width*batch;}
+        int input_bit_size() { return input_channels*input_height*input_width*batch;}
         int input_bit_bytes() {return input_bit_size()*sizeof(float);}
         int filter_size() { return output_channels*input_channels*filter_height*filter_width;}
         int filter_bytes() { return filter_size()*sizeof(float);}
@@ -765,6 +773,11 @@ class InConv128LayerParam
 
         InConv128LayerParam* initialize(float* input, FILE* config_file)
         {
+            #ifdef NN_INFO
+            printf("%d, %d, %d, %d, %d, %d\n", input_height, input_width,
+                    input_channels, output_channels, filter_height, filter_width);
+            #endif
+
             //Process input
             CHECK_NULL_POINTER(input);
             this->input = input;
@@ -907,6 +920,11 @@ class Conv128LayerParam
             output_residual_gpu(NULL), input_residual_gpu(NULL), _a_bit(a_bit), _w_bit(w_bit)
                 
         {
+            #ifdef NN_INFO
+            printf("%d, %d, %d, %d, %d, %d\n", input_height, input_width,
+                    input_channels, output_channels,  filter_height, filter_width);
+            #endif
+
             strncpy(this->name, name, 8);
             this->pad_h = padding?((( (input_height+stride_height-(input_height%stride_height))
                             /stride_height-1)*stride_height+filter_height-input_height)/2):0;
