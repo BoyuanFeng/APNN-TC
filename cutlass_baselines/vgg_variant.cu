@@ -123,228 +123,227 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 #include "cutlass/util/tensor_view_io.h"
 
 #include "helper.h"
+#include "config.h"
 
-#define AlexNet
+// // #define batch_1
+// #define batch_8
+// // #define batch_512
 
-// #define batch_1
-#define batch_8
-// #define batch_512
+// // #define BIT_WIDTH 16
+// // #define BIT_WIDTH 8
+// #define BIT_WIDTH 4
+// // #define BIT_WIDTH 1
 
-// #define BIT_WIDTH 16
-// #define BIT_WIDTH 8
-#define BIT_WIDTH 4
-// #define BIT_WIDTH 1
+// #if BIT_WIDTH == 32
+// using ElementInputA           = float;
+// using ElementInputB           = float;
+// using ElementOutput           = float;
+// using ElementAccumulator      = float;
+// using ElementCompute          = float;
+// using ElementComputeEpilogue = ElementAccumulator;
 
-#if BIT_WIDTH == 32
-using ElementInputA           = float;
-using ElementInputB           = float;
-using ElementOutput           = float;
-using ElementAccumulator      = float;
-using ElementCompute          = float;
-using ElementComputeEpilogue = ElementAccumulator;
+// using LayoutInputA = cutlass::layout::TensorNHWC;
+// using LayoutInputB = cutlass::layout::TensorNHWC;
+// using LayoutOutput = cutlass::layout::TensorNHWC;
 
-using LayoutInputA = cutlass::layout::TensorNHWC;
-using LayoutInputB = cutlass::layout::TensorNHWC;
-using LayoutOutput = cutlass::layout::TensorNHWC;
-
-  /// Device-level Conv2d instance
-  using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
-    ElementInputA, 
-    cutlass::layout::TensorNHWC,
-    ElementInputB, 
-    cutlass::layout::TensorNHWC,
-    ElementOutput, 
-    cutlass::layout::TensorNHWC,
-    ElementAccumulator,
-    cutlass::arch::OpClassSimt,
-    cutlass::arch::Sm80,
-    cutlass::gemm::GemmShape<32, 64, 8>,
-    cutlass::gemm::GemmShape<32, 64, 8>, 
-    cutlass::gemm::GemmShape<1, 1, 1>,
-    cutlass::epilogue::thread::LinearCombination<
-      ElementOutput,
-      1,
-      ElementAccumulator,
-      ElementCompute
-    >,
-    cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
-    4,
-    cutlass::arch::OpMultiplyAdd,
-    cutlass::conv::IteratorAlgorithm::kAnalytic
-  >::Kernel;
-#endif 
-
-
-#if BIT_WIDTH == 16
-using ElementInputA           = cutlass::half_t;
-using ElementInputB           = cutlass::half_t;
-using ElementOutput           = float;
-using ElementAccumulator      = float;
-using ElementCompute          = float;
-using ElementComputeEpilogue = ElementAccumulator;
-
-using LayoutInputA = cutlass::layout::TensorNHWC;
-using LayoutInputB = cutlass::layout::TensorNHWC;
-using LayoutOutput = cutlass::layout::TensorNHWC;
-
-using MMAOp = cutlass::arch::OpClassTensorOp;
-using SmArch = cutlass::arch::Sm80;
-
-using ThreadblockShape = cutlass::gemm::GemmShape<128, 128, 64>;  // Threadblock tile shape
-using WarpShape = cutlass::gemm::GemmShape<64, 64, 64>;          // Warp tile shape
-using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;    // TensorCore instruction shape
-
-using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
-constexpr int NumStages = 3;
-static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
-using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
-                    128 / cutlass::sizeof_bits<ElementOutput>::value, float, float>;
-
-using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
-  ElementInputA, LayoutInputA,
-  ElementInputB, LayoutInputB,
-  ElementOutput, LayoutOutput,
-  ElementAccumulator,
-  MMAOp,
-  SmArch,
-  ThreadblockShape,
-  WarpShape,
-  InstructionShape,
-  EpilogueOp,
-  SwizzleThreadBlock,
-  NumStages,
-  cutlass::arch::OpMultiplyAdd,
-  cutlass::conv::IteratorAlgorithm::kAnalytic
->::Kernel;
-#endif
-
-#if BIT_WIDTH == 8
-
-using ElementInputA           = int8_t;
-using ElementInputB           = int8_t;
-using ElementOutput           = int32_t;
-using ElementAccumulator = int32_t;                   // Data type of accumulator
-using ElementComputeEpilogue = ElementAccumulator;    // Data type of epilogue computation (alpha, beta)
-
-using LayoutInputA = cutlass::layout::TensorNHWC;
-using LayoutInputB = cutlass::layout::TensorNHWC;
-using LayoutOutput = cutlass::layout::TensorNHWC;
-
-using MMAOp = cutlass::arch::OpClassTensorOp;
-using SmArch = cutlass::arch::Sm80;
-using ThreadblockShape = cutlass::gemm::GemmShape<128, 128, 64>;  // Threadblock tile shape
-using WarpShape = cutlass::gemm::GemmShape<64, 64, 64>;          // Warp tile shape
-using InstructionShape = cutlass::gemm::GemmShape<16, 8, 32>;    // TensorCore instruction shape
-using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
-constexpr int NumStages = 3;
-static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
-using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
-                                                64 / cutlass::sizeof_bits<ElementOutput>::value,
-                                                int32_t,
-                                                float>;
-
-using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
-  ElementInputA, LayoutInputA,
-  ElementInputB, LayoutInputB,
-  ElementOutput, LayoutOutput,
-  ElementAccumulator,
-  MMAOp,
-  SmArch,
-  ThreadblockShape,
-  WarpShape,
-  InstructionShape,
-  EpilogueOp,
-  SwizzleThreadBlock,
-  NumStages,
-  cutlass::arch::OpMultiplyAddSaturate,
-  cutlass::conv::IteratorAlgorithm::kAnalytic
->::Kernel;
-#endif // END if BIT_WIDTH == 8
-
-#if BIT_WIDTH == 4
-using ElementInputA = cutlass::int4b_t;              // Data type of elements in input tensor
-using ElementInputB = cutlass::int4b_t;              // Data type of elements in input tensor
-using ElementOutput = cutlass::int4b_t;              // Data type of elements in output tensor
-using ElementAccumulator = int32_t;                   // Data type of accumulator
-using ElementComputeEpilogue = ElementAccumulator;    // Data type of epilogue computation (alpha, beta)
-
-using LayoutInputA = cutlass::layout::TensorNHWC;
-using LayoutInputB = cutlass::layout::TensorNHWC;
-using LayoutOutput = cutlass::layout::TensorNHWC;
-
-using MMAOp = cutlass::arch::OpClassTensorOp;
-using SmArch = cutlass::arch::Sm80;
-using ThreadblockShape = cutlass::gemm::GemmShape<128, 128, 128>;    // Threadblock tile shape
-using WarpShape = cutlass::gemm::GemmShape<64, 64, 128>;             // Warp tile shape
-using InstructionShape = cutlass::gemm::GemmShape<16, 8, 64>;       // TensorCore instruction shape
-using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
-constexpr int NumStages = 3;
-static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
-using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
-                                                64 / cutlass::sizeof_bits<ElementOutput>::value,
-                                                int32_t,
-                                                float>;
-
-using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
-  ElementInputA, LayoutInputA,
-  ElementInputB, LayoutInputB,
-  ElementOutput, LayoutOutput,
-  ElementAccumulator,
-  MMAOp,
-  SmArch,
-  ThreadblockShape,
-  WarpShape,
-  InstructionShape,
-  EpilogueOp,
-  SwizzleThreadBlock,
-  NumStages,
-  cutlass::arch::OpMultiplyAddSaturate,
-  cutlass::conv::IteratorAlgorithm::kAnalytic
->::Kernel;
-#endif  // END if BIT_WIDTH == 4
+//   /// Device-level Conv2d instance
+//   using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
+//     ElementInputA, 
+//     cutlass::layout::TensorNHWC,
+//     ElementInputB, 
+//     cutlass::layout::TensorNHWC,
+//     ElementOutput, 
+//     cutlass::layout::TensorNHWC,
+//     ElementAccumulator,
+//     cutlass::arch::OpClassSimt,
+//     cutlass::arch::Sm80,
+//     cutlass::gemm::GemmShape<32, 64, 8>,
+//     cutlass::gemm::GemmShape<32, 64, 8>, 
+//     cutlass::gemm::GemmShape<1, 1, 1>,
+//     cutlass::epilogue::thread::LinearCombination<
+//       ElementOutput,
+//       1,
+//       ElementAccumulator,
+//       ElementCompute
+//     >,
+//     cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>,
+//     4,
+//     cutlass::arch::OpMultiplyAdd,
+//     cutlass::conv::IteratorAlgorithm::kAnalytic
+//   >::Kernel;
+// #endif 
 
 
-#if BIT_WIDTH == 1
-using ElementInputA = cutlass::uint1b_t;              // Data type of elements in input tensor
-using ElementInputB = cutlass::uint1b_t;              // Data type of elements in input tensor
-using ElementOutput = int32_t;                        // Data type of elements in output tensor
-using ElementAccumulator = int32_t;                   // Data type of accumulator
-using ElementComputeEpilogue = ElementAccumulator;    // Data type of epilogue computation (alpha, beta)
+// #if BIT_WIDTH == 16
+// using ElementInputA           = cutlass::half_t;
+// using ElementInputB           = cutlass::half_t;
+// using ElementOutput           = float;
+// using ElementAccumulator      = float;
+// using ElementCompute          = float;
+// using ElementComputeEpilogue = ElementAccumulator;
 
-using LayoutInputA = cutlass::layout::TensorNHWC;
-using LayoutInputB = cutlass::layout::TensorNHWC;
-using LayoutOutput = cutlass::layout::TensorNHWC;
+// using LayoutInputA = cutlass::layout::TensorNHWC;
+// using LayoutInputB = cutlass::layout::TensorNHWC;
+// using LayoutOutput = cutlass::layout::TensorNHWC;
 
-using MMAOp = cutlass::arch::OpClassTensorOp;
-using SmArch = cutlass::arch::Sm80;
-using ThreadblockShape = cutlass::gemm::GemmShape<128, 256, 1024>;  // Threadblock tile shape
-using WarpShape = cutlass::gemm::GemmShape<64, 64, 1024>;         // Warp tile shape
-using InstructionShape = cutlass::gemm::GemmShape<16, 8, 256>;    // TensorCore instruction shape
-using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
-constexpr int NumStages = 2;
-static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
-using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
-                                                128 / cutlass::sizeof_bits<ElementOutput>::value,
-                                                int32_t,
-                                                float>;
+// using MMAOp = cutlass::arch::OpClassTensorOp;
+// using SmArch = cutlass::arch::Sm80;
 
-using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
-  ElementInputA, LayoutInputA,
-  ElementInputB, LayoutInputB,
-  ElementOutput, LayoutOutput,
-  ElementAccumulator,
-  MMAOp,
-  SmArch,
-  ThreadblockShape,
-  WarpShape,
-  InstructionShape,
-  EpilogueOp,
-  SwizzleThreadBlock,
-  NumStages,
-  cutlass::arch::OpMultiplyAdd,
-  cutlass::conv::IteratorAlgorithm::kOptimized
->::Kernel;
-#endif  // END if BIT_WIDTH == 1
+// using ThreadblockShape = cutlass::gemm::GemmShape<128, 128, 64>;  // Threadblock tile shape
+// using WarpShape = cutlass::gemm::GemmShape<64, 64, 64>;          // Warp tile shape
+// using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;    // TensorCore instruction shape
+
+// using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
+// constexpr int NumStages = 3;
+// static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
+// using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
+//                     128 / cutlass::sizeof_bits<ElementOutput>::value, float, float>;
+
+// using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
+//   ElementInputA, LayoutInputA,
+//   ElementInputB, LayoutInputB,
+//   ElementOutput, LayoutOutput,
+//   ElementAccumulator,
+//   MMAOp,
+//   SmArch,
+//   ThreadblockShape,
+//   WarpShape,
+//   InstructionShape,
+//   EpilogueOp,
+//   SwizzleThreadBlock,
+//   NumStages,
+//   cutlass::arch::OpMultiplyAdd,
+//   cutlass::conv::IteratorAlgorithm::kAnalytic
+// >::Kernel;
+// #endif
+
+// #if BIT_WIDTH == 8
+
+// using ElementInputA           = int8_t;
+// using ElementInputB           = int8_t;
+// using ElementOutput           = int32_t;
+// using ElementAccumulator = int32_t;                   // Data type of accumulator
+// using ElementComputeEpilogue = ElementAccumulator;    // Data type of epilogue computation (alpha, beta)
+
+// using LayoutInputA = cutlass::layout::TensorNHWC;
+// using LayoutInputB = cutlass::layout::TensorNHWC;
+// using LayoutOutput = cutlass::layout::TensorNHWC;
+
+// using MMAOp = cutlass::arch::OpClassTensorOp;
+// using SmArch = cutlass::arch::Sm80;
+// using ThreadblockShape = cutlass::gemm::GemmShape<128, 128, 64>;  // Threadblock tile shape
+// using WarpShape = cutlass::gemm::GemmShape<64, 64, 64>;          // Warp tile shape
+// using InstructionShape = cutlass::gemm::GemmShape<16, 8, 32>;    // TensorCore instruction shape
+// using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
+// constexpr int NumStages = 3;
+// static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
+// using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
+//                                                 64 / cutlass::sizeof_bits<ElementOutput>::value,
+//                                                 int32_t,
+//                                                 float>;
+
+// using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
+//   ElementInputA, LayoutInputA,
+//   ElementInputB, LayoutInputB,
+//   ElementOutput, LayoutOutput,
+//   ElementAccumulator,
+//   MMAOp,
+//   SmArch,
+//   ThreadblockShape,
+//   WarpShape,
+//   InstructionShape,
+//   EpilogueOp,
+//   SwizzleThreadBlock,
+//   NumStages,
+//   cutlass::arch::OpMultiplyAddSaturate,
+//   cutlass::conv::IteratorAlgorithm::kAnalytic
+// >::Kernel;
+// #endif // END if BIT_WIDTH == 8
+
+// #if BIT_WIDTH == 4
+// using ElementInputA = cutlass::int4b_t;              // Data type of elements in input tensor
+// using ElementInputB = cutlass::int4b_t;              // Data type of elements in input tensor
+// using ElementOutput = cutlass::int4b_t;              // Data type of elements in output tensor
+// using ElementAccumulator = int32_t;                   // Data type of accumulator
+// using ElementComputeEpilogue = ElementAccumulator;    // Data type of epilogue computation (alpha, beta)
+
+// using LayoutInputA = cutlass::layout::TensorNHWC;
+// using LayoutInputB = cutlass::layout::TensorNHWC;
+// using LayoutOutput = cutlass::layout::TensorNHWC;
+
+// using MMAOp = cutlass::arch::OpClassTensorOp;
+// using SmArch = cutlass::arch::Sm80;
+// using ThreadblockShape = cutlass::gemm::GemmShape<128, 128, 128>;    // Threadblock tile shape
+// using WarpShape = cutlass::gemm::GemmShape<64, 64, 128>;             // Warp tile shape
+// using InstructionShape = cutlass::gemm::GemmShape<16, 8, 64>;       // TensorCore instruction shape
+// using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
+// constexpr int NumStages = 3;
+// static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
+// using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
+//                                                 64 / cutlass::sizeof_bits<ElementOutput>::value,
+//                                                 int32_t,
+//                                                 float>;
+
+// using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
+//   ElementInputA, LayoutInputA,
+//   ElementInputB, LayoutInputB,
+//   ElementOutput, LayoutOutput,
+//   ElementAccumulator,
+//   MMAOp,
+//   SmArch,
+//   ThreadblockShape,
+//   WarpShape,
+//   InstructionShape,
+//   EpilogueOp,
+//   SwizzleThreadBlock,
+//   NumStages,
+//   cutlass::arch::OpMultiplyAddSaturate,
+//   cutlass::conv::IteratorAlgorithm::kAnalytic
+// >::Kernel;
+// #endif  // END if BIT_WIDTH == 4
+
+
+// #if BIT_WIDTH == 1
+// using ElementInputA = cutlass::uint1b_t;              // Data type of elements in input tensor
+// using ElementInputB = cutlass::uint1b_t;              // Data type of elements in input tensor
+// using ElementOutput = int32_t;                        // Data type of elements in output tensor
+// using ElementAccumulator = int32_t;                   // Data type of accumulator
+// using ElementComputeEpilogue = ElementAccumulator;    // Data type of epilogue computation (alpha, beta)
+
+// using LayoutInputA = cutlass::layout::TensorNHWC;
+// using LayoutInputB = cutlass::layout::TensorNHWC;
+// using LayoutOutput = cutlass::layout::TensorNHWC;
+
+// using MMAOp = cutlass::arch::OpClassTensorOp;
+// using SmArch = cutlass::arch::Sm80;
+// using ThreadblockShape = cutlass::gemm::GemmShape<128, 256, 1024>;  // Threadblock tile shape
+// using WarpShape = cutlass::gemm::GemmShape<64, 64, 1024>;         // Warp tile shape
+// using InstructionShape = cutlass::gemm::GemmShape<16, 8, 256>;    // TensorCore instruction shape
+// using SwizzleThreadBlock = cutlass::gemm::threadblock::GemmIdentityThreadblockSwizzle<>;
+// constexpr int NumStages = 2;
+// static cutlass::conv::IteratorAlgorithm const IteratorAlgorithm = cutlass::conv::IteratorAlgorithm::kAnalytic;
+// using EpilogueOp = cutlass::epilogue::thread::LinearCombinationClamp<ElementOutput,
+//                                                 128 / cutlass::sizeof_bits<ElementOutput>::value,
+//                                                 int32_t,
+//                                                 float>;
+
+// using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
+//   ElementInputA, LayoutInputA,
+//   ElementInputB, LayoutInputB,
+//   ElementOutput, LayoutOutput,
+//   ElementAccumulator,
+//   MMAOp,
+//   SmArch,
+//   ThreadblockShape,
+//   WarpShape,
+//   InstructionShape,
+//   EpilogueOp,
+//   SwizzleThreadBlock,
+//   NumStages,
+//   cutlass::arch::OpMultiplyAdd,
+//   cutlass::conv::IteratorAlgorithm::kOptimized
+// >::Kernel;
+// #endif  // END if BIT_WIDTH == 1
 
 using ImplicitGemm = cutlass::conv::device::ImplicitGemmConvolution<Conv2dFpropKernel>;
 
@@ -860,22 +859,6 @@ int main(int argc, char const **args) {
   if (options.benchmark) {
     // Benchmark several layers
 
-    #ifdef batch_1
-    int batch_sizes[] = {1}; //{1, 32, 64, 128, 256, 512};
-    #endif
-
-    #ifdef batch_8
-    int batch_sizes[] = {8}; //{1, 32, 64, 128, 256, 512};
-    #endif
-
-    #ifdef batch_256
-    int batch_sizes[] = {256}; //{1, 32, 64, 128, 256, 512};
-    #endif
-
-    #ifdef batch_512
-    int batch_sizes[] = {512}; //{1, 32, 64, 128, 256, 512};
-    #endif
-
     struct Benchmark {
       int h, w, c, k, r, s;
     } layers[] = {
@@ -901,21 +884,14 @@ int main(int argc, char const **args) {
     Result::print_header(std::cout, options) << std::endl;
 
     int idx = 1;
-
     for (auto const &layer : layers) {
-      for (auto N : batch_sizes) {
-
-        options.update({N, layer.h, layer.w, layer.c}, {layer.k, layer.r, layer.s, layer.c});
-
+        options.update({batch_size, layer.h, layer.w, layer.c}, {layer.k, layer.r, layer.s, layer.c});
         Result result = profile_convolution(options);
         result.print(std::cout, idx, options) << std::endl;
-      }
-      ++idx;
-      // printf("idx: %d\n", idx);
+        ++idx;
     }
   }
   else {
-
     // Execute one problem size
     if (!options.valid()) {
       std::cerr << "Invalid problem." << std::endl;
