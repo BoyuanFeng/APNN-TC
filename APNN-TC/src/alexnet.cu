@@ -1,16 +1,3 @@
-// ---------------------------------------------------------------------------
-// File: alexnet.cu
-// AlexNet BNN inference source file for ImageNet. 
-// ---------------------------------------------------------------------------
-// See our arXiv paper for detail: https://arxiv.org/abs/2006.16578
-// Ang Li, Scientist, Pacific Northwest National Laboratory(PNNL), U.S.
-// Homepage: http://www.angliphd.com
-// GitHub repo: http://www.github.com/pnnl/TCBNN
-// PNNL-IPID: 31925-E, ECCN: EAR99, IR: PNNL-SA-152850
-// BSD Lincese.
-// Richland, 99352, WA, USA. June-30-2020.
-// ---------------------------------------------------------------------------
-
 #include <stdio.h>
 #include <assert.h>
 #include <sys/time.h>
@@ -159,7 +146,7 @@ int main()
     void* args[] = {&bconv1_gpu, &bconv2_gpu, &bconv3_gpu, &bconv4_gpu, &bconv5_gpu, 
         &bfc1_gpu, &bfc2_gpu, &bout_gpu};
 
-    printf("numBlocks: %d, shared_memory: %d\n", numBlocksPerSm, shared_memory);
+    printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
     START_TIMER;
 
     cudaLaunchCooperativeKernel((void*)alexnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 

@@ -1,18 +1,6 @@
-// ---------------------------------------------------------------------------
-// File: kernel.cuh
-// TC-BNN bit-fully-connected and bit-convolution GPU kernel functions.
-// ---------------------------------------------------------------------------
-// See our arXiv paper for detail: https://arxiv.org/abs/2006.16578
-// Ang Li, Scientist, Pacific Northwest National Laboratory(PNNL), U.S.
-// Homepage: http://www.angliphd.com
-// GitHub repo: http://www.github.com/pnnl/TCBNN
-// PNNL-IPID: 31925-E, ECCN: EAR99, IR: PNNL-SA-152850
-// BSD Lincese.
-// Richland, 99352, WA, USA. June-30-2020.
-// ---------------------------------------------------------------------------
-
 #ifndef KERNEL_CUH
 #define KERNEL_CUH
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda.h>
@@ -291,7 +279,7 @@ void Conv_new(Conv128LayerParam* p){
     // compute_gemm_imma((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, \
     // STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width)); 
     // __global__ void APConv_w1a2_pack(const int4 *W, const int4 *X, int *Output, int Height, int Width, int CIN, int COUT) 
-
+    
     APConv_w1a2_pack((const int4*) p->filter_gpu, (const int4*) p->input_gpu, (int*) p->output_gpu, p->input_height, p->input_width, p->input_channels, p->output_channels); 
 }
 

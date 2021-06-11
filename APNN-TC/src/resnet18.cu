@@ -1,16 +1,3 @@
-// ---------------------------------------------------------------------------
-// File: imagenet_resnet.cu
-// ResNet-18 BNN inference source file for ImageNet. 
-// ---------------------------------------------------------------------------
-// See our arXiv paper for detail: https://arxiv.org/abs/2006.16578
-// Ang Li, Scientist, Pacific Northwest National Laboratory(PNNL), U.S.
-// Homepage: http://www.angliphd.com
-// GitHub repo: http://www.github.com/pnnl/TCBNN
-// PNNL-IPID: 31925-E, ECCN: EAR99, IR: PNNL-SA-152850
-// BSD Lincese.
-// Richland, 99352, WA, USA. June-30-2020.
-// ---------------------------------------------------------------------------
-
 #include <stdio.h>
 #include <assert.h>
 #include <sys/time.h>
@@ -116,7 +103,7 @@ __global__ void resnet128(
     grid.sync();
     //========== Output ===========
 //     Out128Layer(bout); //** failed with illegal memory access... check here with memory size
-//     Output_new(bout);
+    Output_new(bout);
 }
 
 int main()
@@ -251,7 +238,6 @@ int main()
     int shared_memory = 96 * 1e3;//512*sizeof(int)*32;
     cudaFuncSetAttribute(resnet128, cudaFuncAttributeMaxDynamicSharedMemorySize,shared_memory);
     cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, resnet128, numThreads, shared_memory);
-
     //cudaFuncSetAttribute(resnet128, cudaFuncAttributePreferredSharedMemoryCarveout,0);
 
     void* args[] = {&bconv1_gpu, 
@@ -274,6 +260,7 @@ int main()
         &bfc1_gpu,
         &bout_gpu};
 
+    printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
     START_TIMER;
 
     cudaLaunchCooperativeKernel((void*)resnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 

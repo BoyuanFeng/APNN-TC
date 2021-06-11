@@ -108,7 +108,7 @@ __global__ void vggnet128(
     FC_new(bfc2);
     grid.sync();
     ////========== Output ===========
-//     Out128Layer(bout);
+    // Out128Layer(bout);
     Output_new(bout);
 }
   
@@ -237,11 +237,11 @@ int main()
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc2->get_output_gpu());  
 
     //================ Setup Kernel =================
-    int numThreads = 128;
+    int numThreads = 256;
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, dev);
     int numBlocksPerSm;
-    int shared_memory = 96 * 1e3; //96 KB
+    int shared_memory= 84*1e3; //84 KB
 
     cudaFuncSetAttribute(vggnet128, cudaFuncAttributeMaxDynamicSharedMemorySize,shared_memory);
     cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, vggnet128, numThreads, shared_memory);
@@ -250,18 +250,19 @@ int main()
         &bconv7_gpu, &bconv8_gpu, &bconv9_gpu, &bconv10_gpu, &bconv11_gpu, &bconv12_gpu, &bconv13_gpu,
         &bfc1_gpu, &bfc2_gpu, &bout_gpu};
 
+    // shared_memory = 84 * 1e3; // 96KB
+    printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
     START_TIMER;
 
     cudaLaunchCooperativeKernel((void*)vggnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 
             numThreads, args, shared_memory);
-
     //vggnet128<<<numBlocksPerSm*deviceProp.multiProcessorCount, numThreads, shared_memory>>> (
     //bconv1_gpu, bconv2_gpu, bconv3_gpu, bconv4_gpu, bconv5_gpu, bfc1_gpu, bfc2_gpu, bout_gpu);
 
     STOP_TIMER;
     printf("VGG_b%d (ms): %.3f\n", batch, milliseconds);
 
-    float* output = bout->download_output();
+    // float* output = bout->download_output();
     //validate_prediction(output, image_labels, output_size, batch);
 
     /*

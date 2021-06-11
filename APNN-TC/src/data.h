@@ -1,19 +1,3 @@
-// ---------------------------------------------------------------------------
-// File: data.h
-// Load images and labels. Functions to load batched input images and labels 
-// for MNIST, Cifar-10 and ImageNet in raw or batched format.
-// ---------------------------------------------------------------------------
-// See our arXiv paper for detail: https://arxiv.org/abs/2006.16578
-// Ang Li, Scientist, Pacific Northwest National Laboratory(PNNL), U.S.
-// Homepage: http://www.angliphd.com
-// GitHub repo: http://www.github.com/pnnl/TCBNN
-// PNNL-IPID: 31925-E, ECCN: EAR99, IR: PNNL-SA-152850
-// BSD Lincese.
-// Richland, 99352, WA, USA. June-30-2020.
-// ---------------------------------------------------------------------------
-
-
-
 #ifndef DATA_H
 #define DATA_H
 
