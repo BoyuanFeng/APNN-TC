@@ -122,9 +122,12 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 #include "cutlass/util/reference/host/convolution.h"
 #include "cutlass/util/tensor_view_io.h"
 
+
+#include <cudnn.h>
 #include "helper.h"
 #include "gemm.cuh"
 #include "config.h"
+
 
 // Command line options parsing
 struct Options {
@@ -666,6 +669,73 @@ int main(int argc, char const **args) {
   for (int i = 1; i < MLP_layers_config.size(); i++){
       out = MLP_hidden_layer<ElementInputA , cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
   }
+
+
+  // set the pooling layer for evaluation.
+  cudnnHandle_t cudnn;
+  checkCUDNN(cudnnCreate(&cudnn));
+
+  cudnnPoolingDescriptor_t pooling_desc;
+  //create descriptor handle
+  checkCUDNN(cudnnCreatePoolingDescriptor(&pooling_desc));
+  //initialize descriptor
+  checkCUDNN(cudnnSetPooling2dDescriptor(pooling_desc,            //descriptor handle
+                                         CUDNN_POOLING_MAX,       //mode - max pooling
+                                         CUDNN_NOT_PROPAGATE_NAN, //NaN propagation mode
+                                         3,                       //window height
+                                         3,                       //window width
+                                         0,                       //vertical padding
+                                         0,                       //horizontal padding
+                                         1,                       //vertical stride
+                                         1));                     //horizontal stride
+  
+  cudnnTensorDescriptor_t in_desc;
+  //create input data tensor descriptor
+  checkCUDNN(cudnnCreateTensorDescriptor(&in_desc));
+  //initialize input data descriptor 
+  checkCUDNN(cudnnSetTensor4dDescriptor(in_desc,                  //descriptor handle
+                                        CUDNN_TENSOR_NCHW,        //data format
+                                        CUDNN_DTYPE,              //data type (precision)
+                                        2,                        //number of images
+                                        2,                        //number of channels
+                                        10,                       //data height 
+                                        10));                     //data width
+
+  cudnnTensorDescriptor_t out_desc;
+  //create output data tensor descriptor
+  checkCUDNN(cudnnCreateTensorDescriptor(&out_desc));
+  //initialize output data descriptor
+  checkCUDNN(cudnnSetTensor4dDescriptor(out_desc,                 //descriptor handle
+                                        CUDNN_TENSOR_NCHW,        //data format
+                                        CUDNN_DTYPE,              //data type (precision)
+                                        2,                        //number of images
+                                        2,                        //number of channels
+                                        8,                        //data height
+                                        8));                      //data width
+  stype alpha = 1.0f;
+  stype beta = 0.0f;
+  //GPU data pointers
+  dtype *in_data, *out_data;
+  //allocate arrays on GPU
+  cudaMalloc(&in_data,IN_DATA_BYTES);
+  cudaMalloc(&out_data,OUT_DATA_BYTES);
+  //copy input data to GPU array
+
+  // cudaMemcpy(in_data,input,IN_DATA_BYTES,cudaMemcpyHostToDevice);
+  
+  //initize output data on GPU
+  cudaMemset(out_data,0,OUT_DATA_BYTES);
+
+  //Call pooling operator
+  checkCUDNN(cudnnPoolingForward(cudnn,         //cuDNN context handle
+                                 pooling_desc,  //pooling descriptor handle
+                                 &alpha,        //alpha scaling factor
+                                 in_desc,       //input tensor descriptor
+                                 in_data,       //input data pointer to GPU memory
+                                 &beta,         //beta scaling factor
+                                 out_desc,      //output tensor descriptor
+                                 out_data));    //output data pointer from GPU memory
+
   return 0;
 }
 

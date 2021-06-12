@@ -403,4 +403,28 @@ using ImplicitGemm = cutlass::conv::device::ImplicitGemmConvolution<Conv2dFpropK
 (                               \
   (((x + 32 - 1)/32)*32)        \ 
 )
+
+#define checkCUDNN(exp) \
+  { \
+    cudnnStatus_t status = (exp); \
+    if(status != CUDNN_STATUS_SUCCESS) { \
+      std::cerr << "Error on line " << __LINE__ << ": " \
+                << cudnnGetErrorString(status) << std::endl; \
+      std::exit(EXIT_FAILURE); \
+    } \
+  } 
+  
+
+#define IN_DATA_BYTES (IN_SIZE*sizeof(dtype))
+#define OUT_DATA_BYTES (OUT_SIZE*sizeof(dtype))
+
+#define IN_SIZE (2*2*10*10)
+#define OUT_SIZE (2*2*8*8)
+#define TOL (0.000005)
+
+#define CUDNN_DTYPE CUDNN_DATA_FLOAT
+typedef float stype;
+typedef float dtype;
+
+
 #endif // config_H
