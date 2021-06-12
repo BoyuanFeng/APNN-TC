@@ -676,8 +676,12 @@ int main(int argc, char const **args) {
   checkCUDNN(cudnnCreate(&cudnn));
 
   cudnnPoolingDescriptor_t pooling_desc;
+  cudnnActivationDescriptor_t  activDesc;
+
   //create descriptor handle
   checkCUDNN(cudnnCreatePoolingDescriptor(&pooling_desc));
+  checkCUDNN(cudnnCreateActivationDescriptor(&activDesc));
+
   //initialize descriptor
   checkCUDNN(cudnnSetPooling2dDescriptor(pooling_desc,            //descriptor handle
                                          CUDNN_POOLING_MAX,       //mode - max pooling
@@ -686,41 +690,71 @@ int main(int argc, char const **args) {
                                          3,                       //window width
                                          0,                       //vertical padding
                                          0,                       //horizontal padding
-                                         1,                       //vertical stride
-                                         1));                     //horizontal stride
+                                         2,                       //vertical stride
+                                         2));                     //horizontal stride
+checkCUDNN( cudnnSetActivationDescriptor(activDesc,
+                                      CUDNN_ACTIVATION_RELU,
+                                      CUDNN_PROPAGATE_NAN,
+                                      0.0) );
   
   cudnnTensorDescriptor_t in_desc;
   //create input data tensor descriptor
   checkCUDNN(cudnnCreateTensorDescriptor(&in_desc));
+
+  std::vector<std::vector<int>> Pooling_layers_config = {
+    {8, 64, 55, 55},
+    {8, 192, 27, 27},
+    {8, 256, 13, 13}
+  };
+
+
+  for (int i = 1; i < Pooling_layers_config.size(); i++){
+
+  int n = Pooling_layers_config[i][0];
+  int c = Pooling_layers_config[i][1];
+  int h = Pooling_layers_config[i][2];
+  int w = Pooling_layers_config[i][3];
+
   //initialize input data descriptor 
   checkCUDNN(cudnnSetTensor4dDescriptor(in_desc,                  //descriptor handle
                                         CUDNN_TENSOR_NCHW,        //data format
                                         CUDNN_DTYPE,              //data type (precision)
-                                        2,                        //number of images
-                                        2,                        //number of channels
-                                        10,                       //data height 
-                                        10));                     //data width
+                                        n,                        //number of images
+                                        c,                        //number of channels
+                                        h,                       //data height 
+                                        w));                     //data width
 
-  cudnnTensorDescriptor_t out_desc;
+  cudnnTensorDescriptor_t out_desc, out_desc_relu;
   //create output data tensor descriptor
   checkCUDNN(cudnnCreateTensorDescriptor(&out_desc));
+  checkCUDNN(cudnnCreateTensorDescriptor(&out_desc_relu));
+
   //initialize output data descriptor
   checkCUDNN(cudnnSetTensor4dDescriptor(out_desc,                 //descriptor handle
                                         CUDNN_TENSOR_NCHW,        //data format
                                         CUDNN_DTYPE,              //data type (precision)
-                                        2,                        //number of images
-                                        2,                        //number of channels
-                                        8,                        //data height
-                                        8));                      //data width
+                                        n,                        //number of images
+                                        c,                        //number of channels
+                                        (h-3)/2+1,                //data height
+                                        (w-3)/2+1));              //data width
+
+    checkCUDNN(cudnnSetTensor4dDescriptor(out_desc_relu,               //descriptor handle
+                                        CUDNN_TENSOR_NCHW,        //data format
+                                        CUDNN_DTYPE,              //data type (precision)
+                                        n,                        //number of images
+                                        c,                        //number of channels
+                                        (h-3)/2+1,                //data height
+                                        (w-3)/2+1));              //data width
   stype alpha = 1.0f;
   stype beta = 0.0f;
   //GPU data pointers
-  dtype *in_data, *out_data;
+  dtype *in_data, *out_data, *out_relu;
   //allocate arrays on GPU
   cudaMalloc(&in_data,IN_DATA_BYTES);
   cudaMalloc(&out_data,OUT_DATA_BYTES);
-  //copy input data to GPU array
+  cudaMalloc(&out_relu,OUT_DATA_BYTES);
 
+  //copy input data to GPU array
   // cudaMemcpy(in_data,input,IN_DATA_BYTES,cudaMemcpyHostToDevice);
   
   //initize output data on GPU
@@ -736,6 +770,15 @@ int main(int argc, char const **args) {
                                  out_desc,      //output tensor descriptor
                                  out_data));    //output data pointer from GPU memory
 
+checkCUDNN( cudnnActivationForward(cudnn,
+                                  activDesc,
+                                  &alpha,
+                                  out_desc,
+                                  out_data,
+                                  &beta,
+                                  out_desc_relu,
+                                  out_relu) );   
+  }
   return 0;
 }
 
