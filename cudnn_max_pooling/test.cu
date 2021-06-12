@@ -69,7 +69,7 @@ int main() {
   cudaMalloc(&in_data,IN_DATA_BYTES);
   cudaMalloc(&out_data,OUT_DATA_BYTES);
   //copy input data to GPU array
-  cudaMemcpy(in_data,input,IN_DATA_BYTES,cudaMemcpyHostToDevice);
+  // cudaMemcpy(in_data,input,IN_DATA_BYTES,cudaMemcpyHostToDevice);
   //initize output data on GPU
   cudaMemset(out_data,0,OUT_DATA_BYTES);
 
@@ -84,65 +84,65 @@ int main() {
                                  out_data));    //output data pointer from GPU memory
 
   //allocate array on CPU for output tensor data
-  dtype *result = (dtype*)malloc(OUT_DATA_BYTES);
+  // dtype *result = (dtype*)malloc(OUT_DATA_BYTES);
   //copy output data from GPU
-  cudaMemcpy(result,out_data,OUT_DATA_BYTES,cudaMemcpyDeviceToHost);
+  // cudaMemcpy(result,out_data,OUT_DATA_BYTES,cudaMemcpyDeviceToHost);
 
-  //loop over and check that the forward pass outputs match expected results (exactly)
-  int err = 0;
-  for(int i=0; i<OUT_SIZE; i++) {
-    if(result[i] != output[i]) {
-      std::cout << "Error! Expected " << output[i] << " got " << result[i] << " for idx " << i <<std::endl;
-      err++;
-    }
-  }
+  // //loop over and check that the forward pass outputs match expected results (exactly)
+  // int err = 0;
+  // for(int i=0; i<OUT_SIZE; i++) {
+  //   if(result[i] != output[i]) {
+  //     std::cout << "Error! Expected " << output[i] << " got " << result[i] << " for idx " << i <<std::endl;
+  //     err++;
+  //   }
+  // }
 
-  std::cout << "Forward finished with " << err << " errors" << std::endl;
+  // std::cout << "Forward finished with " << err << " errors" << std::endl;
 
-  dtype *in_grad;
-  //allocate array on GPU for gradient
-  cudaMalloc(&in_grad,IN_DATA_BYTES);
-  //initialize output array 
-  cudaMemset(in_grad,0,IN_DATA_BYTES);
+  // dtype *in_grad;
+  // //allocate array on GPU for gradient
+  // cudaMalloc(&in_grad,IN_DATA_BYTES);
+  // //initialize output array 
+  // cudaMemset(in_grad,0,IN_DATA_BYTES);
 
-  //call pooling operator to compute gradient
-  checkCUDNN(cudnnPoolingBackward(cudnn,        //cuDNN context handle
-                                  pooling_desc, //pooling descriptor handle
-                                  &alpha,       //alpha scaling factor
-                                  out_desc,     //output tensor descriptor
-                                  out_data,     //output tensor pointer to GPU memory
-                                  out_desc,     //differential tensor descriptor
-                                  out_data,     //differential tensor pointer to GPU memory
-                                  in_desc,      //input tensor descriptor
-                                  in_data,      //input tensor pointer to GPU memory
-                                  &beta,        //beta scaling factor
-                                  in_desc,      //gradient tensor descriptor
-                                  in_grad));    //gradient tensor pointer to GPU memory
+  // //call pooling operator to compute gradient
+  // checkCUDNN(cudnnPoolingBackward(cudnn,        //cuDNN context handle
+  //                                 pooling_desc, //pooling descriptor handle
+  //                                 &alpha,       //alpha scaling factor
+  //                                 out_desc,     //output tensor descriptor
+  //                                 out_data,     //output tensor pointer to GPU memory
+  //                                 out_desc,     //differential tensor descriptor
+  //                                 out_data,     //differential tensor pointer to GPU memory
+  //                                 in_desc,      //input tensor descriptor
+  //                                 in_data,      //input tensor pointer to GPU memory
+  //                                 &beta,        //beta scaling factor
+  //                                 in_desc,      //gradient tensor descriptor
+  //                                 in_grad));    //gradient tensor pointer to GPU memory
 
   //allocate array on CPU for gradient tensor data
-  dtype *grad = (dtype*)malloc(IN_DATA_BYTES);
+  // dtype *grad = (dtype*)malloc(IN_DATA_BYTES);
   //copy gradient data from GPU
-  cudaMemcpy(grad,in_grad,IN_DATA_BYTES,cudaMemcpyDeviceToHost);
+  // cudaMemcpy(grad,in_grad,IN_DATA_BYTES,cudaMemcpyDeviceToHost);
 
   //loop over and check that the forward pass outputs match expected results (within tolerance)
-  err = 0;
-  for(int i=0; i<IN_SIZE; i++) {
-    double diff = std::abs(gradient[i] - grad[i]);
-    if(diff > TOL) {
-      std::cout << "Error! Expected " << gradient[i] << " got " << grad[i] << " for idx " << i << " diff: " << diff <<std::endl;
-      err++;
-    }
-  }
+  // err = 0;
+  // for(int i=0; i<IN_SIZE; i++) {
+  //   double diff = std::abs(gradient[i] - grad[i]);
+  //   if(diff > TOL) {
+  //     std::cout << "Error! Expected " << gradient[i] << " got " << grad[i] << " for idx " << i << " diff: " << diff <<std::endl;
+  //     err++;
+  //   }
+  // }
 
-  std::cout << "Backward finished with " << err << " errors" << std::endl;
+  // std::cout << "Backward finished with " << err << " errors" << std::endl;
 
   //free CPU arrays
-  free(result);
-  free(grad);
+  // free(result);
+  // free(grad);
 
   //free GPU arrays
   cudaFree(in_data);
-  cudaFree(in_grad);
+  // cudaFree(in_grad);
   cudaFree(out_data);
 
   //free cuDNN descriptors
