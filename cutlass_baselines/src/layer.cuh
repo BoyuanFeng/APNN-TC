@@ -1,8 +1,21 @@
 #ifndef layer_h
 #define layer_h
 
+#include "cutlass/cutlass.h"
+#include "cutlass/gemm/device/gemm.h"
+#include "cutlass/util/host_tensor.h"
+#include "cutlass/util/reference/device/gemm.h"
+#include "cutlass/util/reference/host/tensor_compare.h"
+#include "cutlass/util/reference/host/tensor_copy.h"
+#include "cutlass/util/reference/host/tensor_fill.h"
+#include "cutlass/util/tensor_view_io.h"
+#include <cutlass/numeric_types.h>
 
 #include <cudnn.h>
+#include "helper.h"
+#include "gemm.cuh"
+#include "config.h"
+
 
 class CONV{
 public:
@@ -19,12 +32,12 @@ public:
         _filter_height = filter_height;
         _filter_width = filter_width;
 
-        // compute the output shape.
-        _output_height = (_input_height + 2*padding_h - filter_height)/stride + 1;
-        _output_width = (_input_width + 2*padding_w - filter_width)/stride + 1;
-        
         _stride = stride;
 
+        // compute the output shape.
+        _output_height = (_input_height + 2*padding_h - filter_height)/_stride + 1;
+        _output_width = (_input_width + 2*padding_w - filter_width)/_stride + 1;
+        
         init();
     }
 
