@@ -1,6 +1,9 @@
 #ifndef layer_h
 #define layer_h
 
+
+#include <cudnn.h>
+
 class CONV{
 public:
     CONV(int batch_size, int input_height, int input_height, 
@@ -103,27 +106,67 @@ public:
         _input_width = input_height;     
         
         _in_channels = in_channels;
-        _out_channels = out_channels;
+
+        output_bytes = _batch_size*_in_channels*_input_height*_input_width;
+
+        _init();
     }
 
     ~POOL(){
 
     }
 
-    void init(float* input_gpu) {
-        this->input = input_gpu;
-        // allocate memory for output
+    void _init() {
+
+        checkCUDNN( cudnnCreateActivationDescriptor(&activDesc));
+        checkCUDNN( cudnnSetActivationDescriptor(activDesc,
+                    CUDNN_ACTIVATION_RELU,
+                    CUDNN_PROPAGATE_NAN,
+                    0.0) );
+        
+        checkCUDNN(cudnnCreateTensorDescriptor(&input_desc));
+        checkCUDNN(cudnnCreateTensorDescriptor(&output_desc));
+
+        checkCUDNN(cudnnSetTensor4dDescriptor(input_desc,             
+                    CUDNN_TENSOR_NCHW,       
+                    CUDNN_DTYPE,            
+                    _batch_size,                       
+                    _in_channels,                      
+                    _input_height,                
+                    _input_width);            
+        checkCUDNN(cudnnSetTensor4dDescriptor(output_desc,             
+                    CUDNN_TENSOR_NCHW,       
+                    CUDNN_DTYPE,            
+                    _batch_size,                       
+                    _in_channels,                      
+                    _input_height,                
+                    _input_width);  
+
+        cudaMalloc(&output, output_bytes);
     }
 
-    float* forward(){
-
+    float* forward(float* input){
         // Runnking kernel.
-        // kernel(output, this->input);
+        checkCUDNN( cudnnActivationForward(cudnn,
+                    activDesc,
+                    &alpha,
+                    input_desc,
+                    input,
+                    &beta,
+                    output_desc,
+                    output) );   
         return output;
     }
 
 
 private:
+
+    cudnnActivationDescriptor_t  activDesc;
+    cudnnTensorDescriptor_t input_desc, output_desc;
+
+    float alpha = 1.0f;
+    float beta = 0.0f;
+
     int _batch_size;
 
     int _input_height;
@@ -132,9 +175,12 @@ private:
     int _in_channels;
     int _out_channels;
 
-    float* output;
-    float* filter;
+    int output_bytes;
+
     float* input;
+    float* filter;
+    float* output;
+
 };
 
 #endif
