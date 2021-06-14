@@ -426,9 +426,7 @@ Result profile_convolution(Options const &options) {
     tensor_b.device_ref(),
     tensor_c.device_ref(),
     tensor_c.device_ref(),
-    {options.alpha, options.beta},
-
-    
+    {options.alpha, options.beta},    
   };
 
   //
