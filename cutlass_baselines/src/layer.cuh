@@ -137,6 +137,7 @@ private:
     float* filter;
     float* input;
 };
+*/
 
 class FC{
 public:
@@ -154,13 +155,13 @@ public:
         cudaFree(output);
     }
 
-    void init(float*input_gpu)
+    void init()
     {   
-        problem_size(_batch_size, _in_channels, _out_channels);
+        problem_size = cutlass::gemm::GemmCoord(_batch_size, _in_channels, _out_channels);
         // allocate memory for weight.
-        cudaMalloc(&weight, in_channels*out_channels*sizeof(float)); 
+        cudaMalloc(&weight, _in_channels*_out_channels*sizeof(float)); 
         // allocate memory for output.
-        cudaMalloc(&output, _batch_size*out_channels*sizeof(float)); 
+        cudaMalloc(&output, _batch_size*_out_channels*sizeof(float)); 
         // update with tensor reference.
         weight_tensor_ref = cutlass::TensorRef<ElementInputB,LayoutInputB_gemm>(weight); 
         output_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput_gemm>(output); 
@@ -172,8 +173,7 @@ public:
 
     float* forward(float* input){
 
-        input_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput_gemm>(input); 
-
+        input_tensor_ref = cutlass::TensorRef<ElementInputA, cutlass::layout::RowMajor>(input); 
         // Create a tuple of gemm kernel arguments. This is later passed as arguments to launch
         // instantiated CUTLASS kernel
         typename Gemm::Arguments arguments{
@@ -188,10 +188,8 @@ public:
         // Using the arguments, query for extra workspace required for matrix multiplication computation
         workspace_size = Gemm::get_workspace_size(arguments);
         // Allocate workspace memory
-        workspace(workspace_size);
+        workspace = cutlass::device_memory::allocation<uint8_t>(workspace_size);
         // Instantiate CUTLASS kernel depending on templates
-        // Gemm gemm_op;
-        // Initialize CUTLASS kernel with arguments and workspace pointer
         // cutlass::Status status = 
         CUTLASS_CHECK(gemm_op.initialize(arguments, workspace.get()));
         CUTLASS_CHECK(gemm_op());
@@ -200,41 +198,31 @@ public:
     }
 
 private:
-    int batch_size;
+    int _batch_size;
     int _in_channels;
     int _out_channels;
     
     int split_k_slices = 1;         // <-- Split K dimension into 1 partitions
 
     cutlass::gemm::GemmCoord problem_size;
-    cutlass::TensorRef<ElementInputB,LayoutInputB_gemm> input_tensor_ref;
-    cutlass::TensorRef<ElementInputB,LayoutInputB_gemm> weight_tensor_ref;
-    cutlass::TensorRef<ElementOutput,LayoutOutput_gemm> output_tensor_ref;
+    cutlass::TensorRef<ElementInputA, LayoutInputA_gemm> input_tensor_ref;
+    cutlass::TensorRef<ElementInputB, LayoutInputB_gemm> weight_tensor_ref;
+    cutlass::TensorRef<ElementOutput, LayoutOutput_gemm> output_tensor_ref;
     ElementComputeEpilogue_gemm alpha;
     ElementComputeEpilogue_gemm beta;
-    size_t workspace_size;
     cutlass::device_memory::allocation<uint8_t> workspace;
+    size_t workspace_size;
     Gemm gemm_op;
 
     float* output;
     float* weight;
     float* input;
 };
-*/
 
 
-
-// class TEST{
-
-// public:
-//     TEST(int batch_size, int in_channels, int input_height, int input_width)
-//     {
-
-//     }
-// };
-
-
-
+//
+// Pooling Layer kernel_size = 3, stride = 2.
+//
 class POOL{
 
     public:
@@ -337,7 +325,9 @@ private:
     float* output;
 };
 
-
+//
+// RELU Layer
+//
 class RELU{
 public:
     RELU(int batch_size, int in_channels, int input_height, int input_width, cudnnHandle_t* cuDNN_handler)
