@@ -16,7 +16,7 @@
 #include "gemm.cuh"
 #include "config.h"
 
-
+/*
 class CONV{
 public:
     CONV(int batch_size, int input_height, int input_height, 
@@ -220,20 +220,32 @@ private:
     float* weight;
     float* input;
 };
+*/
+
+
+
+// class TEST{
+
+// public:
+//     TEST(int batch_size, int in_channels, int input_height, int input_width)
+//     {
+
+//     }
+// };
+
 
 
 class POOL{
-public:
-    POOL(int batch_size, int input_height, int input_height, 
-        int in_channels, cudnnHandle_t* cuDNN_handler){
 
-        cudnn = cuDNN_handler;
+    public:
+        POOL(int batch_size, int in_channels, int input_height, int input_width, cudnnHandle_t* cuDNN_handler)
+    {
+
+        // cudnn = cuDNN_handler;
         _batch_size = batch_size;
-
-        _input_height = input_height;
-        _input_width = input_height;     
-        
         _in_channels = in_channels;
+        _input_height = input_height;
+        _input_width = input_width;     
 
         _output_height = (_input_height - 3)/2+1;
         _output_width = (_input_width - 3)/2+1;
@@ -244,7 +256,9 @@ public:
     }
 
     ~POOL(){
-        cudaFree(cudaMalloc);
+        cudaFree(output);
+        cudaFree(filter);
+
     }
 
     void _init() {
@@ -270,7 +284,7 @@ public:
                     _batch_size,                       
                     _in_channels,                      
                     _input_height,                
-                    _input_width);            
+                    _input_width));            
         checkCUDNN(cudnnSetTensor4dDescriptor(
                     output_desc,             
                     CUDNN_TENSOR_NCHW,       
@@ -278,7 +292,7 @@ public:
                     _batch_size,                       
                     _in_channels,                      
                     _input_height,                
-                    _input_width);  
+                    _input_width));  
 
         cudaMalloc(&output, output_bytes);
     }
@@ -308,42 +322,36 @@ private:
     float beta = 0.0f;
 
     int _batch_size;
-
-    int _input_height;
-    int _input_width;
-
-    int _in_channels;
-    int _out_channels;
+    int _input_height, _input_width;
+    int _output_height, _output_width;
+    int _in_channels, _out_channels;
 
     int output_bytes;
 
     float* input;
     float* filter;
     float* output;
-
 };
 
 
 class RELU{
 public:
-    RELU(int batch_size, int input_height, int input_height, 
-        int in_channels, cudnnHandle_t* cuDNN_handler){
+    RELU(int batch_size, int in_channels, int input_height, int input_width, cudnnHandle_t* cuDNN_handler)
+    {
 
         cudnn = cuDNN_handler;
         _batch_size = batch_size;
-
-        _input_height = input_height;
-        _input_width = input_height;     
-        
         _in_channels = in_channels;
+        _input_height = input_height;
+        _input_width = input_width;     
 
-        output_bytes = _batch_size*_in_channels*_input_height*_input_width;
+        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(float);
 
         _init();
     }
 
-    ~POOL(){
-        cudaFree(cudaMalloc);
+    ~RELU(){
+        cudaFree(output);
     }
 
     void _init() {
@@ -364,7 +372,7 @@ public:
                     _batch_size,                       
                     _in_channels,                      
                     _input_height,                
-                    _input_width);            
+                    _input_width));            
         checkCUDNN(cudnnSetTensor4dDescriptor(
                     output_desc,             
                     CUDNN_TENSOR_NCHW,       
@@ -372,7 +380,7 @@ public:
                     _batch_size,                       
                     _in_channels,                      
                     _input_height,                
-                    _input_width);  
+                    _input_width));  
 
         cudaMalloc(&output, output_bytes);
     }
@@ -412,7 +420,6 @@ private:
     int output_bytes;
 
     float* input;
-    float* filter;
     float* output;
 
 };

@@ -17,7 +17,7 @@
 #include "cutlass/util/tensor_view_io.h"
 
 
-#define batch_size 8
+// #define batch_size 8
 
 #define BIT_WIDTH 32
 // #define BIT_WIDTH 16
@@ -396,6 +396,7 @@ using Conv2dFpropKernel = typename cutlass::conv::kernel::DefaultConv2dFprop<
   cutlass::conv::IteratorAlgorithm::kOptimized
 >::Kernel;
 #endif  // END if BIT_WIDTH == 1
+
 
 using ImplicitGemm = cutlass::conv::device::ImplicitGemmConvolution<Conv2dFpropKernel>;
 
