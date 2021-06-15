@@ -16,16 +16,15 @@
 #include "gemm.cuh"
 #include "config.h"
 
-/*
 class CONV{
 public:
-    CONV(int batch_size, int input_height, int input_height, 
+    CONV(int batch_size, int input_height, int input_width, 
         int in_channels, int out_channels,
         int filter_height, int filter_width, int stride){
         
         _input_height = input_height;
-        _input_width = input_height;     
-
+        _input_width = input_width;     
+        
         _in_channels = in_channels;
         _out_channels = out_channels;
 
@@ -42,7 +41,8 @@ public:
     }
 
     ~CONV(){
-
+        cudaFree(filter);
+        cudaFree(output);
     }
 
     void init()
@@ -52,25 +52,25 @@ public:
         // allocate memory for weight.
         cudaMalloc(&filter, _in_channels*_out_channels*_filter_height*_filter_width*sizeof(float)); 
         // allocate memory for output.
-        cudaMalloc(&output, _batch_size*out_channels*_output_height*_output_width*sizeof(float)); 
+        cudaMalloc(&output, _batch_size*_out_channels*_output_height*_output_width*sizeof(float)); 
         // update with tensor reference.
-        filter_tensor_ref = cutlass::TensorRef<ElementInputB,LayoutInputB_gemm>(filter); 
-        output_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput_gemm>(output); 
+        filter_tensor_ref = cutlass::TensorRef<ElementInputB,LayoutInputB>(filter); 
+        output_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput>(output); 
         // Initialize alpha and beta for dot product computation.
-        alpha = ElementComputeEpilogue_gemm(1);
-        beta = ElementComputeEpilogue_gemm(0);
+        alpha = ElementComputeEpilogue(1);
+        beta = ElementComputeEpilogue(0);
 
-        input_size(_batch_size, _in_channels, _input_height, _input_width);
-        filter_size(_out_channels, _in_channels, _filter_height, _filter_width);
-        padding(1,1,1,1);
-        conv_stride(_stride, _stride);
-        dilation(1,1);
-        output_size(_batch_size, _out_channels, _output_height, _output_width);
+        input_size = cutlass::Tensor4DCoord(_batch_size, _in_channels, _input_height, _input_width);
+        filter_size = cutlass::Tensor4DCoord(_out_channels, _in_channels, _filter_height, _filter_width);
+        padding = cutlass::Tensor4DCoord(1,1,1,1);
+        conv_stride = cutlass::MatrixCoord(_stride, _stride);
+        dilation = cutlass::MatrixCoord(1,1);
+        output_size = cutlass::Tensor4DCoord(_batch_size, _out_channels, _output_height, _output_width);
     }
 
     float* forward(float* input){
 
-        input_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput_gemm>(input); 
+        input_tensor_ref = cutlass::TensorRef<ElementInputA, LayoutInputA>(input); 
 
         // runnking kernel.
         typename ImplicitGemm::Arguments arguments{
@@ -80,7 +80,7 @@ public:
               padding,
               conv_stride,
               dilation,
-              output_size(),
+              output_size,
               mode,
               split_k_slices 
             },
@@ -93,11 +93,11 @@ public:
         //
         // Initialize CUTLASS Convolution
         //
-        implicit_gemm_op;
+        // implicit_gemm_op;
         workspace_size = implicit_gemm_op.get_workspace_size(arguments);
 
         // Allocate workspace memory
-        workspace(workspace_size);
+        workspace = cutlass::device_memory::allocation<uint8_t>(workspace_size);
         CUTLASS_CHECK(implicit_gemm_op.initialize(arguments, workspace.get()));
         //
         // Launch initialized CUTLASS kernel
@@ -115,29 +115,36 @@ private:
     int _input_width;
     int _filter_height;
     int _filter_width;
-    
+    int _stride;
+    int _batch_size;
+
     int _output_height;
     int _output_width;
 
-    int split_k_slices = 1;     //-> Split K dimension into 1 partitions
     cutlass::Tensor4DCoord input_size;
+    cutlass::Tensor4DCoord output_size;
     cutlass::Tensor4DCoord filter_size;
     cutlass::Tensor4DCoord padding;
-    cutlass::Tensor4DCoord conv_stride;
-    cutlass::Tensor4DCoord dilation;
-    cutlass::Tensor4DCoord output_size;
+    
+    cutlass::MatrixCoord conv_stride;
+    cutlass::MatrixCoord dilation;
+
     ImplicitGemm implicit_gemm_op;
     size_t workspace_size;
     cutlass::device_memory::allocation<uint8_t> workspace;
     cutlass::conv::Mode mode; 
+    cutlass::TensorRef<ElementInputA, LayoutInputA> input_tensor_ref;
+    cutlass::TensorRef<ElementInputB, LayoutInputB> filter_tensor_ref;
+    cutlass::TensorRef<ElementOutput, LayoutOutput> output_tensor_ref;
+    ElementComputeEpilogue alpha, beta;
 
+    int split_k_slices = 1;     //-> Split K dimension into 1 partitions
     int padding_w = 1;
     int padding_h = 1;
     float* output;
     float* filter;
     float* input;
 };
-*/
 
 class FC{
 public:
@@ -173,7 +180,7 @@ public:
 
     float* forward(float* input){
 
-        input_tensor_ref = cutlass::TensorRef<ElementInputA, cutlass::layout::RowMajor>(input); 
+        input_tensor_ref = cutlass::TensorRef<ElementInputA, LayoutInputA_gemm>(input); 
         // Create a tuple of gemm kernel arguments. This is later passed as arguments to launch
         // instantiated CUTLASS kernel
         typename Gemm::Arguments arguments{
