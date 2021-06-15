@@ -241,7 +241,7 @@ class POOL{
         POOL(int batch_size, int in_channels, int input_height, int input_width, cudnnHandle_t* cuDNN_handler)
     {
 
-        // cudnn = cuDNN_handler;
+        cudnn = cuDNN_handler;
         _batch_size = batch_size;
         _in_channels = in_channels;
         _input_height = input_height;
@@ -253,6 +253,9 @@ class POOL{
         output_bytes = _batch_size*_in_channels*_output_height*_output_width*sizeof(float);
 
         _init();
+
+        printf("Init POOL (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
+        printf("POOL output (h, w): %d,%d\n", _output_height, _output_width);
     }
 
     ~POOL(){
@@ -291,14 +294,13 @@ class POOL{
                     CUDNN_DTYPE,            
                     _batch_size,                       
                     _in_channels,                      
-                    _input_height,                
-                    _input_width));  
+                    _output_height,                
+                    _output_width));  
 
         cudaMalloc(&output, output_bytes);
     }
 
     float* forward(float* input){
-        //Call pooling operator
         checkCUDNN(cudnnPoolingForward(*cudnn,         
                                         pooling_desc,  
                                         &alpha,       
@@ -307,14 +309,16 @@ class POOL{
                                         &beta,        
                                         output_desc,   
                                         output));   
+
+        printf("Forward Pooling\n");
         return output;
     }
 
+    int get_output_height(){ return _output_height;}
+    int get_output_width(){ return _output_width; }
 
 private:
     cudnnHandle_t* cudnn;
-    // checkCUDNN(cudnnCreate(&cudnn));
-
     cudnnPoolingDescriptor_t pooling_desc;
     cudnnTensorDescriptor_t input_desc, output_desc;
 
@@ -348,6 +352,7 @@ public:
         output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(float);
 
         _init();
+        printf("Init ReLU (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
     }
 
     ~RELU(){
@@ -396,6 +401,7 @@ public:
                     &beta,
                     output_desc,
                     output) );   
+        printf("Forward ReLU\n");
         return output;
     }
 
