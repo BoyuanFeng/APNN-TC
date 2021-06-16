@@ -22,6 +22,7 @@ public:
         int in_channels, int out_channels,
         int filter_height, int filter_width, int stride){
         
+        _batch_size = batch_size;
         _input_height = input_height;
         _input_width = input_width;     
         
@@ -38,6 +39,9 @@ public:
         _output_width = (_input_width + 2*padding_w - filter_width)/_stride + 1;
         
         init();
+
+        printf("Init CONV (n,c,h,w): %d,%d,%d,%d\n", _batch_size, _in_channels, _input_height, _input_width);
+        printf("CONV output (h, w): %d,%d\n", _output_height, _output_width);
     }
 
     ~CONV(){
@@ -104,6 +108,8 @@ public:
         //
         CUTLASS_CHECK(implicit_gemm_op());
 
+        printf("Forward CONV\n");
+
         return output;
     }
 
@@ -155,6 +161,8 @@ public:
         _out_channels = out_channels;
 
         init();
+
+        printf("Init FC (n,in,out): %d,%d,%d\n", _batch_size, _in_channels, _out_channels);
     }
 
     ~FC(){
@@ -200,6 +208,8 @@ public:
         // cutlass::Status status = 
         CUTLASS_CHECK(gemm_op.initialize(arguments, workspace.get()));
         CUTLASS_CHECK(gemm_op());
+
+        printf("Forward FC\n");
 
         return output;
     }
