@@ -21,7 +21,7 @@ class CONV{
 public:
     CONV(int batch_size, int input_height, int input_width, 
         int in_channels, int out_channels,
-        int filter_height, int filter_width, int stride){
+        int filter_height, int filter_width, int stride, int padding){
         
         _batch_size = batch_size;
         _input_height = input_height;
@@ -34,10 +34,12 @@ public:
         _filter_width = filter_width;
 
         _stride = stride;
+        _padding_h = padding;
+        _padding_w = padding;
 
         // compute the output shape.
-        _output_height = (_input_height + 2*padding_h - filter_height)/_stride + 1;
-        _output_width = (_input_width + 2*padding_w - filter_width)/_stride + 1;
+        _output_height = (_input_height + 2*_padding_h - filter_height)/_stride + 1;
+        _output_width = (_input_width + 2*_padding_w - filter_width)/_stride + 1;
         
         init();
 
@@ -67,7 +69,7 @@ public:
 
         input_size = cutlass::Tensor4DCoord(_batch_size, _in_channels, _input_height, _input_width);
         filter_size = cutlass::Tensor4DCoord(_out_channels, _in_channels, _filter_height, _filter_width);
-        padding = cutlass::Tensor4DCoord(1,1,1,1);
+        padding = cutlass::Tensor4DCoord(1,1,_padding_h,_padding_w);
         conv_stride = cutlass::MatrixCoord(_stride, _stride);
         dilation = cutlass::MatrixCoord(1,1);
         output_size = cutlass::Tensor4DCoord(_batch_size, _out_channels, _output_height, _output_width);
@@ -119,6 +121,9 @@ public:
         return output;
     }
 
+    int get_output_height(){ return _output_height;}
+    int get_output_width(){ return _output_width; }
+    int get_out_channels(){ return _out_channels; }
 
 private:
     int _in_channels;
@@ -151,8 +156,8 @@ private:
     ElementComputeEpilogue alpha, beta;
 
     int split_k_slices = 1;     //-> Split K dimension into 1 partitions
-    int padding_w = 1;
-    int padding_h = 1;
+    int _padding_w = 1;
+    int _padding_h = 1;
 
     ElementInputA* input;
     ElementInputB* filter;
@@ -227,6 +232,7 @@ public:
         return output;
     }
 
+    int get_out_channels(){ return _out_channels; }
 private:
     int _batch_size;
     int _in_channels;
@@ -340,7 +346,7 @@ class POOL{
 
     int get_output_height(){ return _output_height;}
     int get_output_width(){ return _output_width; }
-
+    int get_out_channels(){ return _out_channels; }
 private:
     cudnnHandle_t* cudnn;
     cudnnPoolingDescriptor_t pooling_desc;
@@ -436,6 +442,9 @@ public:
         return output;
     }
 
+    int get_output_height(){ return _input_height;}
+    int get_output_width(){ return _input_width; }
+    int get_out_channels(){ return _in_channels; }
 
 private:
     cudnnHandle_t* cudnn;
