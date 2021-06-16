@@ -11,6 +11,7 @@
 #include "cutlass/util/tensor_view_io.h"
 #include <cutlass/numeric_types.h>
 
+#include <ctime>
 #include <cudnn.h>
 #include "helper.h"
 #include "gemm.cuh"
@@ -54,9 +55,9 @@ public:
         mode = cutlass::conv::Mode::kCrossCorrelation;
         // problem_size(_batch_size, _in_channels, _out_channels);
         // allocate memory for weight.
-        cudaMalloc(&filter, _in_channels*_out_channels*_filter_height*_filter_width*sizeof(float)); 
+        cudaMalloc(&filter, _in_channels*_out_channels*_filter_height*_filter_width*sizeof(ElementInputB)); 
         // allocate memory for output.
-        cudaMalloc(&output, _batch_size*_out_channels*_output_height*_output_width*sizeof(float)); 
+        cudaMalloc(&output, _batch_size*_out_channels*_output_height*_output_width*sizeof(ElementOutput)); 
         // update with tensor reference.
         filter_tensor_ref = cutlass::TensorRef<ElementInputB,LayoutInputB>(filter); 
         output_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput>(output); 
@@ -72,7 +73,7 @@ public:
         output_size = cutlass::Tensor4DCoord(_batch_size, _out_channels, _output_height, _output_width);
     }
 
-    float* forward(float* input){
+    ElementInputA* forward(ElementInputA* input){
 
         input_tensor_ref = cutlass::TensorRef<ElementInputA, LayoutInputA>(input); 
 
@@ -106,9 +107,14 @@ public:
         //
         // Launch initialized CUTLASS kernel
         //
+        std::clock_t c_start = std::clock();
+
         CUTLASS_CHECK(implicit_gemm_op());
 
-        printf("Forward CONV\n");
+        std::clock_t c_end = std::clock();
+        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+
+        printf("Forward CONV (ms): %.3f\n", time_elapsed_ms);
 
         return output;
     }
@@ -147,9 +153,10 @@ private:
     int split_k_slices = 1;     //-> Split K dimension into 1 partitions
     int padding_w = 1;
     int padding_h = 1;
-    float* output;
-    float* filter;
-    float* input;
+
+    ElementInputA* input;
+    ElementInputB* filter;
+    ElementOutput* output;
 };
 
 class FC{
@@ -174,9 +181,9 @@ public:
     {   
         problem_size = cutlass::gemm::GemmCoord(_batch_size, _in_channels, _out_channels);
         // allocate memory for weight.
-        cudaMalloc(&weight, _in_channels*_out_channels*sizeof(float)); 
+        cudaMalloc(&weight, _in_channels*_out_channels*sizeof(ElementInputB)); 
         // allocate memory for output.
-        cudaMalloc(&output, _batch_size*_out_channels*sizeof(float)); 
+        cudaMalloc(&output, _batch_size*_out_channels*sizeof(ElementOutput)); 
         // update with tensor reference.
         weight_tensor_ref = cutlass::TensorRef<ElementInputB,LayoutInputB_gemm>(weight); 
         output_tensor_ref = cutlass::TensorRef<ElementOutput,LayoutOutput_gemm>(output); 
@@ -186,7 +193,7 @@ public:
     }
 
 
-    float* forward(float* input){
+    ElementInputA* forward(ElementInputA* input){
 
         input_tensor_ref = cutlass::TensorRef<ElementInputA, LayoutInputA_gemm>(input); 
         // Create a tuple of gemm kernel arguments. This is later passed as arguments to launch
@@ -207,9 +214,15 @@ public:
         // Instantiate CUTLASS kernel depending on templates
         // cutlass::Status status = 
         CUTLASS_CHECK(gemm_op.initialize(arguments, workspace.get()));
-        CUTLASS_CHECK(gemm_op());
 
-        printf("Forward FC\n");
+        std::clock_t c_start = std::clock();
+
+        CUTLASS_CHECK(gemm_op());
+        
+        std::clock_t c_end = std::clock();
+        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+
+        printf("Forward FC (ms): %.3f\n", time_elapsed_ms);
 
         return output;
     }
@@ -231,9 +244,9 @@ private:
     size_t workspace_size;
     Gemm gemm_op;
 
-    float* output;
-    float* weight;
-    float* input;
+    ElementInputA* input;
+    ElementInputB* weight;
+    ElementOutput* output;
 };
 
 
@@ -255,7 +268,7 @@ class POOL{
         _output_height = (_input_height - 3)/2+1;
         _output_width = (_input_width - 3)/2+1;
 
-        output_bytes = _batch_size*_in_channels*_output_height*_output_width*sizeof(float);
+        output_bytes = _batch_size*_in_channels*_output_height*_output_width*sizeof(cuDNNtype);
 
         _init();
 
@@ -305,7 +318,10 @@ class POOL{
         cudaMalloc(&output, output_bytes);
     }
 
-    float* forward(float* input){
+    cuDNNtype* forward(cuDNNtype* input){
+
+        std::clock_t c_start = std::clock();
+
         checkCUDNN(cudnnPoolingForward(*cudnn,         
                                         pooling_desc,  
                                         &alpha,       
@@ -315,7 +331,10 @@ class POOL{
                                         output_desc,   
                                         output));   
 
-        printf("Forward Pooling\n");
+        std::clock_t c_end = std::clock();
+        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+        printf("Forward Pooling (ms): %.3f\n", time_elapsed_ms);
+
         return output;
     }
 
@@ -337,9 +356,9 @@ private:
 
     int output_bytes;
 
-    float* input;
-    float* filter;
-    float* output;
+    cuDNNtype* input;
+    cuDNNtype* filter;
+    cuDNNtype* output;
 };
 
 //
@@ -356,7 +375,7 @@ public:
         _input_height = input_height;
         _input_width = input_width;     
 
-        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(float);
+        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(cuDNNtype);
 
         _init();
         printf("Init ReLU (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
@@ -397,8 +416,10 @@ public:
         cudaMalloc(&output, output_bytes);
     }
 
-    float* forward(float* input){
-        // Runnking kernel.
+    cuDNNtype* forward(cuDNNtype* input){
+
+        std::clock_t c_start = std::clock();
+
         checkCUDNN( cudnnActivationForward(
                     *cudnn,
                     activDesc,
@@ -408,7 +429,10 @@ public:
                     &beta,
                     output_desc,
                     output) );   
-        printf("Forward ReLU\n");
+        std::clock_t c_end = std::clock();
+        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+        printf("Forward ReLU (ms): %.3f\n", time_elapsed_ms);
+        
         return output;
     }
 
@@ -432,8 +456,8 @@ private:
 
     int output_bytes;
 
-    float* input;
-    float* output;
+    cuDNNtype* input;
+    cuDNNtype* output;
 
 };
 

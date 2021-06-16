@@ -19,6 +19,8 @@
 
 // #define batch_size 8
 
+
+// for CUTLASS configuration. (CONV, FC)
 #define BIT_WIDTH 32
 // #define BIT_WIDTH 16
 // #define BIT_WIDTH 8
@@ -28,13 +30,21 @@
 #if BIT_WIDTH == 32
   typedef float input_t;
   typedef float output_t;
+  #define CUDNN_DTYPE CUDNN_DATA_FLOAT
+  typedef float cuDNNtype;
 #elif BIT_WIDTH == 16
   typedef cutlass::half_t input_t;
   typedef cutlass::half_t output_t;
+  // typedef half_t input_t;
+  // typedef half_t output_t;
+  #define CUDNN_DTYPE CUDNN_DATA_HALF
+  typedef __half cuDNNtype;
 #elif BIT_WIDTH == 8
   typedef int8_t input_t;
   // typedef int32_t output_t;
   typedef int8_t output_t;
+  #define CUDNN_DTYPE CUDNN_DATA_INT8
+  typedef int8_t cuDNNtype;
 #elif BIT_WIDTH == 4
   typedef cutlass::int4b_t input_t;
   // typedef int32_t output_t;
@@ -416,16 +426,14 @@ using ImplicitGemm = cutlass::conv::device::ImplicitGemmConvolution<Conv2dFpropK
   } 
   
 
-#define IN_DATA_BYTES (IN_SIZE*sizeof(dtype))
-#define OUT_DATA_BYTES (OUT_SIZE*sizeof(dtype))
+// #define IN_DATA_BYTES (IN_SIZE*sizeof(dtype))
+// #define OUT_DATA_BYTES (OUT_SIZE*sizeof(dtype))
 
-#define IN_SIZE (2*2*10*10)
-#define OUT_SIZE (2*2*8*8)
-#define TOL (0.000005)
+// #define IN_SIZE (2*2*10*10)
+// #define OUT_SIZE (2*2*8*8)
+// #define TOL (0.000005)
 
-#define CUDNN_DTYPE CUDNN_DATA_FLOAT
-typedef float stype;
-typedef float dtype;
+
 
 
 #endif // config_H
