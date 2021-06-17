@@ -262,17 +262,19 @@ private:
 class POOL{
 
     public:
-        POOL(int batch_size, int in_channels, int input_height, int input_width, cudnnHandle_t* cuDNN_handler)
+        POOL(int batch_size, int in_channels, int input_height, int input_width, cudnnHandle_t* cuDNN_handler, int kernel=3, int stride=2)
     {
 
         cudnn = cuDNN_handler;
+        _kernel_size = kernel;
+        _stride = stride;
         _batch_size = batch_size;
         _in_channels = in_channels;
         _input_height = input_height;
         _input_width = input_width;     
 
-        _output_height = (_input_height - 3)/2+1;
-        _output_width = (_input_width - 3)/2+1;
+        _output_height = (_input_height - _kernel_size)/stride+1;
+        _output_width = (_input_width - _kernel_size)/stride+1;
 
         output_bytes = _batch_size*_in_channels*_output_height*_output_width*sizeof(cuDNNtype);
 
@@ -294,12 +296,12 @@ class POOL{
         checkCUDNN(cudnnSetPooling2dDescriptor(pooling_desc,            //descriptor handle
                                                 CUDNN_POOLING_MAX,       //mode - max pooling
                                                 CUDNN_NOT_PROPAGATE_NAN, //NaN propagation mode
-                                                3,                       //window height
-                                                3,                       //window width
+                                                _kernel_size,                       //window height
+                                                _kernel_size,                       //window width
                                                 0,                       //vertical padding
                                                 0,                       //horizontal padding
-                                                2,                       //vertical stride
-                                                2));                     //horizontal stride
+                                                _stride,                       //vertical stride
+                                                _stride));                     //horizontal stride
                                                 
         checkCUDNN(cudnnCreateTensorDescriptor(&input_desc));
         checkCUDNN(cudnnCreateTensorDescriptor(&output_desc));
@@ -346,7 +348,7 @@ class POOL{
 
     int get_output_height(){ return _output_height;}
     int get_output_width(){ return _output_width; }
-    int get_out_channels(){ return _out_channels; }
+    int get_out_channels(){ return _in_channels; }
 private:
     cudnnHandle_t* cudnn;
     cudnnPoolingDescriptor_t pooling_desc;
@@ -358,7 +360,9 @@ private:
     int _batch_size;
     int _input_height, _input_width;
     int _output_height, _output_width;
-    int _in_channels, _out_channels;
+    int _in_channels;
+    int _kernel_size;
+    int _stride;
 
     int output_bytes;
 

@@ -1,684 +1,176 @@
-/***************************************************************************************************
- * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are permitted
- * provided that the following conditions are met:
- *     * Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, this list of
- *       conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *     * Neither the name of the NVIDIA CORPORATION nor the names of its contributors may be used
- *       to endorse or promote products derived from this software without specific prior written
- *       permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TOR (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- **************************************************************************************************/
 
-/**
-
-This example shows how to run convolution kernels using functions and data structures
-provided by CUTLASS using tensor cores; which we run on a NVIDIA Ampere GPU.
-
-Writing a single high performance convolution kernel is hard but do-able. Whereas writing
-high performance kernels at scale which works for multiple problem sizes with good abstractions is
-really hard. CUTLASS solves this problem by providing simplified abstractions to compose
-multiple sections of implicit gemm kernel. When used properly, the kernels can hit peak performance
-of GPU easily.
-
-CUTLASS divides a kernel into hierarchical composable sections. Which means, at each thread, warp
-and thread-block level, they compute on their own tile-size with higher level of tile sizes being
-composed from lower level ones. Multiple thread-tiles (tile size each thread computes) can be used
-to form warp-tiles (tile size each warp computes) and multiple warp tiles can be used to compute
-threadblock-tile (tile size computed by a threadblock).
-
-In thie example, we split variable initialization into
-1. Setting up data properties : describes how tensors are laid out in the memory and how the kernel
-can view them (logical to physical mapping)
-2. Setting up computation properties : describes how the above set tensors will be used to compute
-output of convolution.
-
-First, we setup the data types of the input tensor A, weights' tensor B and output tensor C along
-with alpha, beta as the equation for convolution is C = alpha * Conv2dFprop(A, B) + beta * C. In CUTLASS,
-the kernels first compute Conv2dFprop(A, B) and leave the rest of the computation to end of the kernel as
-alpha * X + beta * C is a simple element-wise operation on X (Conv2dFprop(A, B)) and C. We call this as 
-epilogue of kernel. Hence, we setup data types for alpha and beta to be equal to 
-ElementComputeEpilogue = float. We use the data type for elements in input tensor A and B as 
-cutlass::half_t. We convey this to CUTLASS kernel by initializing template variables ElementAccumulator (float),
-ElementComputeEpilogue (float), ElementInputA (cutlass::half_t), ElementInputB (cutlass::half_t),
-ElementOutput (float). Communicating just the data type is not enough. As the data is laid out 
-linearly in memory, we have to convey the layout of tensors. We do that by initializing template
-variables LayoutInputA, LayoutInputB and LayoutOutput to TensorNHWC cutlass variable. Next, we setup
-rules to comptue alpha * X + beta * C which is called epilogue of the kernel. We initialize template
-variable EpilogueOp, which takes the data type of output ElementOutput (float), the number of
-elements per vector memory access (8), data type of accumulator (float) and data type of
-computation of linear combination (alpha * X + beta * C).
-
-Now that we setup the properties of data, we have to setup properties of computation.
-
-Second, we create template variables of tile sizes for thread-block, warp and mma-op to 128x128x64,
-64x64x64, 16x8x16 (MxNxK) respectively. When passed to instantiate CUTLASS Implicit GEMM kernel, it
-internally deduces the amount of threads needed per thread-block, amount of shared memory, storing
-data in bank-conflict free manner, and ton of other variables required to compose, intialize and
-launch a high performance Implicit GEMM kernel. This is the beauty of CUTLASS, it relieves developer
-from understanding and coding complicated hardware optimizations which can easily go wrong.
-
-CUTLASS also supports multiple MMA pipelines in a threadblock. What are MMA pipelines? MMA pipelines
-constitute the whole process of loading input data from global memory to shared memory, loading data
-from shared memory to registers, doing matrix multiplication, store to global memory. The below flow
-sequence shows a typical mma multistage pipeline.
-(see include/cutlass/conv/threadblock/implicit_gemm_multistage.h)
-
-tensor in global memory --cp_async--> tile in shared memory --smem loads--> registers 
---mma--> registers --global stores--> output to global memory
-
-NVIDIA Ampere uses `cp_async` to build multistage software pipeline to better hide latencies.
-
-
-There are few more template variables initialized such as, which threadblock tile of output matrix
-is done which threadblock launched on an SM, CUDA SM architecture of GPU you want to run on.
-
-These are all put together to create a template variable which describes CUTLASS Implicit GEMM
-kernel using cutlass::conv::device::ImplicitGemm template.
-
-The next step is to intialize physical data, instantiate and initialize CUTLASS kernel and run it.
-We use CUTLASS utilities to initialize, fill, compare tensors as they are simple and doesn't come
-in the way of learning CUTLASS.
-
-Once all the tensors are initialized and filled with data, create arguments tuple to launch CUTLASS
-kernel which takes problem size (N = 1, H = 64, W = 64, C = 128), filter size (K = 64,
-R = 3, S = 3, C = 128 ), padding, strides, dilation, tensors, alpha, beta and the
-important one, split k-dimension factor. Along with that, we query CUTLASS if any scratch-space
-memory required by the kernel we instantiated. If yes, we create it and pass it along with other
-arguments created to intialize CUTLASS kernel then, the kernel is launched.
-
-In this example, we later on launch a reference convolution kernel (from CUTLASS utilities) to
-compare if the output from CUTLASS kernel is same as the reference implicit GEMM kernel.
-*/
-
-#include <iostream>
-#include <sstream>
-
-#include "cutlass/cutlass.h"
-#include "cutlass/gemm/device/gemm.h"
-#include "cutlass/conv/kernel/default_conv2d_fprop.h"
-#include "cutlass/conv/device/implicit_gemm_convolution.h"
-
-#include "cutlass/util/command_line.h"
-#include "cutlass/util/host_tensor.h"
-#include "cutlass/util/tensor_view_io.h"
-#include "cutlass/util/reference/device/gemm.h"
-#include "cutlass/util/reference/host/tensor_compare.h"
-#include "cutlass/util/reference/host/tensor_copy.h"
-#include "cutlass/util/reference/host/tensor_fill.h"
-#include "cutlass/util/reference/host/convolution.h"
-#include "cutlass/util/tensor_view_io.h"
-
-#include "gemm.cuh"
-#include "helper.h"
+#include <stdio.h>
+#include <ctime>
+#include "layer.cuh"
 #include "config.h"
 
-// Command line options parsing
-struct Options {
 
-  bool help;
-  cutlass::Tensor4DCoord input_size;
-  cutlass::Tensor4DCoord filter_size;
-  cutlass::Tensor4DCoord padding;
-  cutlass::MatrixCoord conv_stride;
-  cutlass::MatrixCoord dilation;
-  bool reference_check;
-  bool measure_performance;
-  int iterations;
-  bool save_workspace;
-  ElementComputeEpilogue alpha;
-  ElementComputeEpilogue beta;
-  bool benchmark;
-  std::string tag;
+int main(int argc, char*argv[]){
 
-  Options():
-    help(false),
-    input_size(1, 32, 32, 32),
-    filter_size(32, 3, 3, 32),
-    padding(1, 1, 1, 1),
-    conv_stride(1, 1),
-    dilation(1, 1),
-    reference_check(false),
-    measure_performance(true),
-    iterations(20),
-    save_workspace(false),
-    alpha(1),
-    beta(0),
-    benchmark(false) { }
-
-  // Verify the problem size is compatible with the CUTLASS Convolution implementation.
-  bool valid() {
-
-    //
-    // CUTLASS attempts to load 128b vectors of cutlass::half_t (F16) elements. Consequently,
-    // all pointers, strides, and tensor extents must be divisible by 8 elements.
-    //
-    int const kAlignment = 8;
-
-    if ((input_size.c() % kAlignment) ||
-      (filter_size.n() % kAlignment)) {
-
-      // misaligned tensors
-      return false;
-    }
-
-    // Invalid padding
-    if ((padding.h() != filter_size.h() / 2) ||
-      (padding.w() != filter_size.w() / 2)) {
-
-      return false;
-    }
-
-    return true;
-  }
-
-  /// Updates input and filter sizes
-  void update(
-    cutlass::Tensor4DCoord input_size,
-    cutlass::Tensor4DCoord filter_size) {
-
-    this->input_size = input_size;
-    this->filter_size = filter_size;
-
-    padding.n() = filter_size.h() / 2;
-    padding.h() = filter_size.h() / 2;
-    padding.w() = filter_size.w() / 2;
-    padding.c() = filter_size.w() / 2;
-  }
-
-  // Parses the command line
-  void parse(int argc, char const **args) {
-    cutlass::CommandLine cmd(argc, args);
-
-    if (cmd.check_cmd_line_flag("help")) {
-      help = true;
-    }
-
-    if (cmd.check_cmd_line_flag("ref-check")) {
-      reference_check = true;
-    }
-
-    if (cmd.check_cmd_line_flag("perf-check")) {
-      measure_performance = true;
-    }
-
-    if (cmd.check_cmd_line_flag("save-workspace")) {
-      save_workspace = true;
-    }
-
-    if (cmd.check_cmd_line_flag("benchmark")) {
-      benchmark = true;
-    }
-
-    cmd.get_cmd_line_argument("n", input_size.n());
-    cmd.get_cmd_line_argument("h", input_size.h());
-    cmd.get_cmd_line_argument("w", input_size.w());
-    cmd.get_cmd_line_argument("c", input_size.c());
-
-    cmd.get_cmd_line_argument("k", filter_size.n());
-    cmd.get_cmd_line_argument("r", filter_size.h());
-    cmd.get_cmd_line_argument("s", filter_size.w());
-    filter_size.c() = input_size.c(); 
-
-    cmd.get_cmd_line_argument("alpha", alpha);
-    cmd.get_cmd_line_argument("beta", beta);
+        // float *in_data, *out;
+        ElementInputA* in_data;
+        ElementOutput* out;
     
-    cmd.get_cmd_line_argument("iterations", iterations);
-    cmd.get_cmd_line_argument("tag", tag);
-
-    if (filter_size.h() == 3 && filter_size.w() == 3) {
-      padding = {1, 1, 1, 1};
-    }
-    else {
-      filter_size.h() = 1;
-      filter_size.w() = 1;
-      padding = {0, 0, 0, 0};
-    }
-  }
-
-  /// Prints the usage statement.
-  std::ostream & print_usage(std::ostream &out) const {
-
-    out << "22_ampere_tensorop_conv2dfprop example\n\n"
-      << "  This example uses Ampere's Tensor Core operators on F16 data types to compute\n"
-      << "  forward convolution on tensors of layout NHWC.\n\n"
-      << "Options:\n\n"
-      << "  --help               If specified, displays this usage statement.\n\n"
-      << "  --n <int>            Input tensor extent N\n"
-      << "  --h <int>            Input tensor extent H\n"
-      << "  --w <int>            Input tensor extent W\n"
-      << "  --c <int>            Input tensor extent C (input channel)\n"
-      << "  --k <int>            Filter extent K (output channel)\n"
-      << "  --r <int>            Filter extent R (filter height)\n"
-      << "  --s <int>            Filter extent S (filter width)\n\n"
-      << "  --alpha <float>      Epilogue scalar alpha\n"
-      << "  --beta <float>       Epilogue scalar beta\n\n"
-      << "  --ref-check          If set (true), reference check on the host is computed\n"
-      << "  --perf-check         If set (true), performance is measured.\n"
-      << "  --benchmark          If set (true), performance benchmarking on several layers and batch-size.\n"
-      << "  --iterations <int>   Number of profiling iterations to perform.\n"
-      << "  --save-workspace     If set, workspace is written to a text file.\n"
-      << "  --tag <string>       String to replicate across the first column in the results table\n";
-
-    out << "\n\nExamples:\n\n"
-      << "$ ./examples/22_ampere_tensorop_conv2dfprop/22_ampere_tensorop_conv2dfprop  --n=32 --h=224 --w=224 --c=128 --k=256 --r=1 --s=1\n\n"
-      << "$ ./examples/22_ampere_tensorop_conv2dfprop/22_ampere_tensorop_conv2dfprop  --n=1 --h=224 --w=224 --c=32 --k=32 --r=3 --s=3 --ref-check\n\n";
-
-    return out;
-  }
-  
-  /// Computes the output tensor size (NPQK)
-  cutlass::Tensor4DCoord output_size() const {
-    return cutlass::Tensor4DCoord(
-      input_size.n(),
-      (input_size.h() + padding.n() + padding.h() - filter_size.h()) / conv_stride.row() + 1,
-      (input_size.w() + padding.w() + padding.c() - filter_size.w()) / conv_stride.column() + 1,
-      filter_size.n());
-  }
-
-  /// Compute performance in GFLOP/s
-  double gflops(double runtime_s) const {
-
-    // Number of multiply-adds = NPQK * CRS
-    int64_t fmas = output_size().product() * int64_t(filter_size.h() * filter_size.w() * filter_size.c());
+        int batch_size = 8;
+        int in_channels = 32;
+        int input_height = 224;
+        int input_width = 224;
+        int num_classes = 1000;
     
-    // Two flops per multiply-add
-    return 2.0 * double(fmas) / double(1.0e9) / runtime_s;
-  }
-};
+        cudnnHandle_t cudnn;
+        checkCUDNN(cudnnCreate(&cudnn));
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-struct Result {
-  double runtime_ms;
-  double gflops;
-  cutlass::Status status;
-  cutlass::Status reference_check;
-  cudaError_t error;
-
-  Result(): 
-    runtime_ms(0), 
-    gflops(0),
-    status(cutlass::Status::kSuccess),
-    reference_check(cutlass::Status::kInvalid),
-    error(cudaSuccess) { }
-
-  static std::ostream & print_header(std::ostream &out, Options const &options) {
-
-    if (!options.tag.empty()) {
-      out << "Name,";
-    }
-
-    out << "Precision,Layer,N,H,W,C,K,R,S,Runtime,GFLOPs";
-
-    return out;
-  }
-
-  std::ostream & print(std::ostream &out, int idx, Options const &options) {
-
-    if (!options.tag.empty()) {
-      out << options.tag << ",";
-    }
-
-    out << "BIT_WIDTH-" << BIT_WIDTH << ","
-      << "conv_" << idx << ","
-      << options.input_size.n() << ","
-      << options.input_size.h() << ","
-      << options.input_size.w() << ","
-      << options.input_size.c() << ","
-      << options.filter_size.n() << ","
-      << options.filter_size.h() << ","
-      << options.filter_size.w() << ","
-      << runtime_ms << ","
-      << gflops;
-
-    return out;
-  }
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-/// Runs one benchmark
-Result profile_convolution(Options const &options) {
-
-  Result result;
-
-  //
-  // Allocate host-device tensors using the CUTLASS Utilities.
-  //
-
-  cutlass::HostTensor<ElementInputA, LayoutInputA> tensor_a(options.input_size);
-  cutlass::HostTensor<ElementInputB, LayoutInputB> tensor_b(options.filter_size);
-  cutlass::HostTensor<ElementOutput, LayoutOutput> tensor_c(options.output_size());
-  cutlass::HostTensor<ElementOutput, LayoutOutput> tensor_ref_c(options.output_size());
-
-  //
-  // Initialize tensors
-  //
-
-  // Fill tensor A on host with uniform-distribution random data
-  cutlass::reference::host::TensorFillRandomUniform(
-      tensor_a.host_view(),
-      1,
-      ElementInputA(7),
-      ElementInputA(-8),
-      0);
-
-  // Fill tensor B on host with uniform-distribution random data
-  cutlass::reference::host::TensorFillRandomUniform(
-      tensor_b.host_view(),
-      1,
-      ElementInputB(7),
-      ElementInputB(-8),
-      0);
-
-  // Fill tensor C on host with zeros
-  cutlass::reference::host::TensorFill(
-      tensor_c.host_view());
-
-  // Fill tensor C for reference on host with zeros
-  cutlass::reference::host::TensorFill(
-      tensor_ref_c.host_view());
-
-  // Copy data from host to GPU
-  tensor_a.sync_device();
-  tensor_b.sync_device();
-  tensor_c.sync_device();
-  tensor_ref_c.sync_device();
-
-  //
-  // Define arguments for CUTLASS Convolution
-  //
-
-  cutlass::conv::Mode mode = cutlass::conv::Mode::kCrossCorrelation;
-
-  // Split K dimension into 1 partitions
-  int split_k_slices = 1;
-
-  typename ImplicitGemm::Arguments arguments{
-    {
-      options.input_size,
-      options.filter_size,
-      options.padding,
-      options.conv_stride,
-      options.dilation,
-      options.output_size(),
-      mode,
-      split_k_slices 
-    },
-    tensor_a.device_ref(),
-    tensor_b.device_ref(),
-    tensor_c.device_ref(),
-    tensor_c.device_ref(),
-    {options.alpha, options.beta},
-
+        // for CUTLASS test
+        int in_bytes = batch_size * in_channels * input_height * input_width * sizeof(ElementInputA);
+        cudaMalloc(&in_data, in_bytes);
     
-  };
+        auto conv_1  = new CONV(batch_size, input_height, input_width, in_channels, 96, 7, 7, 2, 3);
+        auto relu_1  = new RELU(batch_size, conv_1->get_out_channels(), conv_1->get_output_height(), conv_1->get_output_width(), &cudnn);
+        auto pool_1  = new POOL(batch_size, relu_1->get_out_channels(), relu_1->get_output_height(), relu_1->get_output_width(), &cudnn, 2, 2);
 
-  //
-  // Initialize CUTLASS Convolution
-  //
+        // CONV-2
+        auto conv_2_1  = new CONV(batch_size, pool_1->get_output_height(), pool_1->get_output_width(), 96, 256, 3, 3, 1, 1);
+        auto relu_2_1  = new RELU(batch_size, conv_2_1->get_out_channels(), conv_2_1->get_output_height(), conv_2_1->get_output_width(), &cudnn);
 
-  ImplicitGemm implicit_gemm_op;
+        auto conv_2_2  = new CONV(batch_size, relu_2_1->get_output_height(), relu_2_1->get_output_width(), 256, 256, 3, 3, 1, 1);
+        auto relu_2_2  = new RELU(batch_size, conv_2_2->get_out_channels(), conv_2_2->get_output_height(), conv_2_2->get_output_width(), &cudnn);
 
-  size_t workspace_size = implicit_gemm_op.get_workspace_size(arguments);
+        auto conv_2_3  = new CONV(batch_size, relu_2_2->get_output_height(), relu_2_2->get_output_width(), 256, 256, 3, 3, 1, 1);
+        auto relu_2_3  = new RELU(batch_size, conv_2_3->get_out_channels(), conv_2_3->get_output_height(), conv_2_3->get_output_width(), &cudnn);
+        auto pool_2_3  = new POOL(batch_size, relu_2_3->get_out_channels(), relu_2_3->get_output_height(), relu_2_3->get_output_width(), &cudnn, 2, 2);
 
-  // Allocate workspace memory
-  cutlass::device_memory::allocation<uint8_t> workspace(workspace_size);
+        // CONV-3
+        auto conv_3_1  = new CONV(batch_size, pool_2_3->get_output_height(), pool_2_3->get_output_width(), 256, 512, 3, 3, 1, 1);
+        auto relu_3_1  = new RELU(batch_size, conv_3_1->get_out_channels(), conv_3_1->get_output_height(), conv_3_1->get_output_width(), &cudnn);
 
-  result.status = implicit_gemm_op.initialize(arguments, workspace.get());
-  CUTLASS_CHECK(result.status);
+        auto conv_3_2  = new CONV(batch_size, relu_3_1->get_output_height(), relu_3_1->get_output_width(), 512, 512, 3, 3, 1, 1);
+        auto relu_3_2  = new RELU(batch_size, conv_3_2->get_out_channels(), conv_3_2->get_output_height(), conv_3_2->get_output_width(), &cudnn);
 
-  //
-  // Launch initialized CUTLASS kernel
-  //
-  result.status = implicit_gemm_op();
+        auto conv_3_3  = new CONV(batch_size, relu_3_2->get_output_height(), relu_3_2->get_output_width(), 512, 512, 3, 3, 1, 1);
+        auto relu_3_3  = new RELU(batch_size, conv_3_3->get_out_channels(), conv_3_3->get_output_height(), conv_3_3->get_output_width(), &cudnn);
+        auto pool_3_3  = new POOL(batch_size, relu_3_3->get_out_channels(), relu_3_3->get_output_height(), relu_3_3->get_output_width(), &cudnn, 2, 2);
 
-  CUTLASS_CHECK(result.status);
+        // CONV-4
+        auto conv_4_1  = new CONV(batch_size, pool_3_3->get_output_height(), pool_3_3->get_output_width(), 512, 512, 3, 3, 1, 1);
+        auto relu_4_1  = new RELU(batch_size, conv_4_1->get_out_channels(), conv_4_1->get_output_height(), conv_4_1->get_output_width(), &cudnn);
 
-  //
-  // Optional reference check
-  //
-  
-  if (options.reference_check) {
-    std::cout << "Verification on host...\n";
+        auto conv_4_2  = new CONV(batch_size, relu_4_1->get_output_height(), relu_4_1->get_output_width(), 512, 512, 3, 3, 1, 1);
+        auto relu_4_2  = new RELU(batch_size, conv_4_2->get_out_channels(), conv_4_2->get_output_height(), conv_4_2->get_output_width(), &cudnn);
 
-    cutlass::conv::Conv2dProblemSize problem_size(
-      options.input_size,
-      options.filter_size,
-      options.padding,
-      options.conv_stride,
-      options.dilation,
-      mode
-    );
+        auto conv_4_3  = new CONV(batch_size, relu_4_2->get_output_height(), relu_4_2->get_output_width(), 512, 512, 3, 3, 1, 1);
+        auto relu_4_3  = new RELU(batch_size, conv_4_3->get_out_channels(), conv_4_3->get_output_height(), conv_4_3->get_output_width(), &cudnn);
+        auto pool_4_3  = new POOL(batch_size, relu_4_3->get_out_channels(), relu_4_3->get_output_height(), relu_4_3->get_output_width(), &cudnn, 2, 2);
+        
+        // FC-layer
+        printf("pool_4_3->get_out_channels(): %d,\n pool_4_3->get_output_height(): %d,\npool_4_3->get_output_width():%d\n",
+        pool_4_3->get_out_channels(), pool_4_3->get_output_height(), pool_4_3->get_output_width());
+        
+        auto fc_1  = new FC(batch_size, pool_4_3->get_out_channels()*pool_4_3->get_output_height()*pool_4_3->get_output_width(), 4096);
+        auto relu_fc_1  = new RELU(batch_size, fc_1->get_out_channels(), 1, 1, &cudnn);
 
-    // Compute with reference implementation
-    cutlass::reference::host::Conv2dFprop<
-      ElementInputA,
-      LayoutInputA,
-      ElementInputB,
-      LayoutInputB,
-      ElementOutput,
-      LayoutOutput,
-      ElementComputeEpilogue,
-      ElementAccumulator,
-      cutlass::NumericConverter<ElementOutput, ElementComputeEpilogue>
-    >(
-      problem_size,
-      tensor_a.host_ref(),
-      tensor_b.host_ref(),
-      tensor_c.host_ref(),
-      tensor_ref_c.host_ref(),
-      options.alpha,
-      options.beta
-    );
+        auto fc_2  = new FC(batch_size, 4096, 4096);
+        auto relu_fc_2  = new RELU(batch_size, fc_2->get_out_channels(), 1, 1, &cudnn);
 
-    // Check if output from CUTLASS kernel and reference kernel are equal or not
-    tensor_c.sync_host();
+        auto fc_3  = new FC(batch_size, 4096, num_classes);
 
-    bool passed = cutlass::reference::host::TensorEquals(
-      tensor_c.host_view(),
-      tensor_ref_c.host_view());
+        printf("=> \n\n");
+        printf("=> Start DNN forward!!\n");
+        std::clock_t c_start = std::clock();
 
-    if (!passed) {
-      result.reference_check = cutlass::Status::kErrorInternal;
-      std::cout << "ERROR - results miscompared.\n";
-    }
-    else {
-      result.reference_check = cutlass::Status::kSuccess;
-      std::cout << "Passed.\n";
-    }
-  }
-  else {
-    result.reference_check = cutlass::Status::kInvalid;
-  }
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
 
-  if (options.save_workspace) {
+        out = conv_1->forward(in_data);
+        out = relu_1->forward(out); 
+        out = pool_1->forward(out); 
 
-    std::stringstream ss;
+        out = conv_2_1->forward(out); 
+        out = relu_2_1->forward(out); 
+        out = conv_2_2->forward(out); 
+        out = relu_2_2->forward(out); 
+        out = conv_2_3->forward(out); 
+        out = relu_2_3->forward(out); 
+        out = pool_2_3->forward(out); 
 
-    ss << "22_ampere_workspace_conv2dfprop_"
-      << options.input_size.n() << "x" << options.input_size.h() << "x" << options.input_size.w() << "x" << options.input_size.c() 
-      << "_"
-      << options.filter_size.n() << "x" << options.filter_size.h() << "x" << options.filter_size.w() << "x" << options.filter_size.c() 
-      << ".dat";
+        out = conv_3_1->forward(out); 
+        out = relu_3_1->forward(out); 
+        out = conv_3_2->forward(out); 
+        out = relu_3_2->forward(out); 
+        out = conv_3_3->forward(out); 
+        out = relu_3_3->forward(out); 
+        out = pool_3_3->forward(out); 
 
-    std::ofstream output_workspace(ss.str());
+        out = conv_4_1->forward(out);  
+        out = relu_4_1->forward(out);  
+        out = conv_4_2->forward(out);  
+        out = relu_4_2->forward(out);  
+        out = conv_4_3->forward(out);  
+        out = relu_4_3->forward(out);  
+        out = pool_4_3->forward(out);  
 
-    output_workspace 
-      << "Input = \n" << tensor_a.host_view() << "\n\n"
-      << "Filters = \n" << tensor_b.host_view() << "\n\n";
+        out = fc_1->forward(out);
+        out = relu_fc_1->forward(out);
+        out = fc_2->forward(out);
+        out = relu_fc_2->forward(out);
+        out = fc_3->forward(out);
 
-    if (options.reference_check) {
-      output_workspace << "Reference = \n" << tensor_ref_c.host_view() << "\n\n";
-    }
 
-    output_workspace << "Computed = \n" << tensor_c.host_view() << std::endl;
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+      
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
 
-    std::cout << "Results written to '" << ss.str() << "'." << std::endl;
-  }
-  
-  //
-  // Performance measurement
-  //
+        std::clock_t c_end = std::clock();
+        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+        printf("\n---------\nCPU (ms): %.3f, CUDA (ms): %.3f\n", time_elapsed_ms, milliseconds);
 
-  if (options.measure_performance) {
-
-    cudaEvent_t events[2];
-    
-    for (auto & event : events) {
-      result.error = cudaEventCreate(&event);
-      if (result.error != cudaSuccess) {
-        std::cerr << "cudaEventCreate() failed: " << cudaGetErrorString(result.error) << std::endl;
-        return result;
-      }
-    }
-
-    // Record an event at the start of a series of convolution operations.
-    result.error = cudaEventRecord(events[0]);
-    if (result.error != cudaSuccess) {
-      std::cerr << "cudaEventRecord() failed: " << cudaGetErrorString(result.error) << std::endl;
-      return result;
-    }
-
-    // Launch a sequence of implicit GEMM operations on the device
-    for (int iteration = 0; iteration < options.iterations; ++iteration) {
-      result.status = implicit_gemm_op();
-      CUTLASS_CHECK(result.status);
-    }
-
-    // Record an event when the convolutions have been launched.
-    result.error = cudaEventRecord(events[1]);
-    if (result.error != cudaSuccess) {
-      std::cerr << "cudaEventRecord() failed: " << cudaGetErrorString(result.error) << std::endl;
-      return result;
-    }
-
-    // Wait for work on the device to complete.
-    result.error = cudaEventSynchronize(events[1]);
-    if (result.error != cudaSuccess) {
-      std::cerr << "cudaEventSynchronize() failed: " << cudaGetErrorString(result.error) << std::endl;
-      return result;
-    }
-
-    // Measure elapsed runtime
-    float runtime_ms = 0;
-    result.error = cudaEventElapsedTime(&runtime_ms, events[0], events[1]);
-    if (result.error != cudaSuccess) {
-      std::cerr << "cudaEventElapsed() failed: " << cudaGetErrorString(result.error) << std::endl;
-      return result;
-    }
-
-    // Print average runtime and GFLOPs.
-    result.runtime_ms = double(runtime_ms) / double(options.iterations);
-    result.gflops = options.gflops(result.runtime_ms / 1000.0);
-
-    // Cleanup
-    for (auto event : events) {
-      (void)cudaEventDestroy(event);
-    }
-  }
-
-  return result;
+        return 0;
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-int main(int argc, char const **args) {
-
-  bool notSupported = false;
-
-  // Ampere Tensor Core operations exposed with mma.sync are first available in CUDA 10.2.
-  //
-  // CUTLASS must be compiled with CUDA 11 Toolkit to run Conv2dFprop examples.
-  if (!(__CUDACC_VER_MAJOR__ > 11 || (__CUDACC_VER_MAJOR__ == 11 && __CUDACC_VER_MINOR__ >= 0))) {
-    std::cerr << "Ampere Tensor Core operations must be compiled with CUDA 11.0 Toolkit or later." << std::endl;
-    notSupported = true;
-  }
-
-  cudaDeviceProp props;
-  CUDA_CHECK(cudaGetDeviceProperties(&props, 0));
-
-  if (!(props.major > 8 || (props.major == 8 && props.minor >= 0))) {
-    std::cerr << "Ampere Tensor Ops must be run on a machine with compute capability at least 80."
-              << std::endl;
-    notSupported = true;
-  }
-
-  if (notSupported) {
-    return 0;
-  }
-
-  Options options;
-  
-  options.parse(argc, args);
-
-  if (options.help) {
-    options.print_usage(std::cout) << std::endl;
-    return 0;
-  }
-
-  options.benchmark = true;
-    // Benchmark several layers
-
-    struct Benchmark {
-      int h, w, c, k, r, s;
-    } layers[] = {
-
-      // VGG-Variant (ImageNet)
-      {224,224,128,128,7,7},
-      {55,55,128,256,3,3},
-      // {224,224,32,96,7,7},
-      // {55,55,96,256,3,3},
-
-      {55,55,256,256,3,3},
-      {55,55,256,256,3,3},
-
-      {27,27,256,512,3,3},
-      {27,27,512,512,3,3},
-      {27,27,512,512,3,3},
-
-      {13,13,512,512,3,3},
-      {13,13,512,512,3,3},
-      {13,13,512,512,3,3},
-    };
-
-    Result::print_header(std::cout, options) << std::endl;
-
-    int idx = 1;
-    for (auto const &layer : layers) {
-        options.update({batch_size, layer.h, layer.w, layer.c}, {layer.k, layer.r, layer.s, layer.c});
-        Result result = profile_convolution(options);
-        result.print(std::cout, idx, options) << std::endl;
-        ++idx;
-    }
 
 
-    std::vector<std::vector<int>> MLP_layers_config = 
-    {
-     {25088,  4096},
-     {4096, 4096},
-     {4096, 1000},
-    };
+// int main(int argc, char*argv[]){
 
-  auto out = MLP_input_layer<ElementInputA, cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[0][1]), PAD32(MLP_layers_config[0][0]));
-  for (int i = 1; i < MLP_layers_config.size(); i++){
-      out = MLP_hidden_layer<ElementInputA , cutlass::layout::RowMajor>(batch_size, PAD32(MLP_layers_config[i][1]), PAD32(MLP_layers_config[i][0]), out);
-  }
-  return 0;
-}
+//     // float *in_data, *out;
+//     ElementInputA* in_data;
+//     ElementOutput* out;
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
+//     int batch_size = 8;
+//     int in_channels = 32;
+    
+//     int input_height = 224;
+//     int input_width = 224;
+
+//     int out_channels = 16;
+//     int filter_height = 3;
+//     int filter_width = 3;
+//     int stride = 1;
+
+
+//     // for CUTLASS test
+//     // int in_bytes = batch_size * in_channels * input_height * input_width * sizeof(ElementInputA);
+//     // cudaMalloc(&in_data, in_bytes);
+//     // auto conv  = new CONV(batch_size, input_height, input_width, in_channels, out_channels, filter_height, filter_width, stride);
+//     // out = conv->forward(in_data);
+//     // auto fc  = new FC(batch_size, in_channels*input_height*input_width, out_channels);
+//     // out = fc->forward(in_data);
+
+
+//     // for cuDNN test.
+//     // set the pooling layer for evaluation.
+//     // int in_bytes = batch_size * in_channels * input_height * input_width * sizeof(cuDNNtype);
+//     // cudaMalloc(&in_data, in_bytes);
+//     // cudnnHandle_t cudnn;
+//     // checkCUDNN(cudnnCreate(&cudnn));
+
+//     // auto pool = new POOL(batch_size, in_channels, input_height, input_width, &cudnn);
+//     // auto relu = new RELU(batch_size, in_channels, pool->get_output_height(), pool->get_output_width(), &cudnn);
+
+//     // out = pool->forward(in_data);
+//     // out = relu->forward(in_data);
+
+//     return 0;
+// }
