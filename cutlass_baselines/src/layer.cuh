@@ -257,16 +257,19 @@ private:
 
 
 //
-// Pooling Layer kernel_size = 3, stride = 2.
+// Pooling Layer kernel_size = 3, stride = 2, padding = 0.
 //
 class POOL{
 
     public:
-        POOL(int batch_size, int in_channels, int input_height, int input_width, cudnnHandle_t* cuDNN_handler, int kernel=3, int stride=2)
+        POOL(int batch_size, int in_channels, int input_height, 
+            int input_width, cudnnHandle_t* cuDNN_handler, 
+            int kernel=3, int stride=2, int padding=0)
     {
 
         cudnn = cuDNN_handler;
         _kernel_size = kernel;
+        _padding = padding;
         _stride = stride;
         _batch_size = batch_size;
         _in_channels = in_channels;
@@ -298,8 +301,8 @@ class POOL{
                                                 CUDNN_NOT_PROPAGATE_NAN, //NaN propagation mode
                                                 _kernel_size,                       //window height
                                                 _kernel_size,                       //window width
-                                                0,                       //vertical padding
-                                                0,                       //horizontal padding
+                                                _padding,                              //vertical padding
+                                                _padding,                               //horizontal padding
                                                 _stride,                       //vertical stride
                                                 _stride));                     //horizontal stride
                                                 
@@ -363,6 +366,7 @@ private:
     int _in_channels;
     int _kernel_size;
     int _stride;
+    int _padding;
 
     int output_bytes;
 
