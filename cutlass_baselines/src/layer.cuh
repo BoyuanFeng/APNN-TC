@@ -106,17 +106,27 @@ public:
         // Allocate workspace memory
         workspace = cutlass::device_memory::allocation<uint8_t>(workspace_size);
         CUTLASS_CHECK(implicit_gemm_op.initialize(arguments, workspace.get()));
+
+        #define N 100
         //
         // Launch initialized CUTLASS kernel
         //
-        std::clock_t c_start = std::clock();
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
 
-        CUTLASS_CHECK(implicit_gemm_op());
+        for (int i = 0; i < N; i++)
+            implicit_gemm_op();
 
-        std::clock_t c_end = std::clock();
-        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
 
-        printf("Forward CONV (ms): %.3f\n", time_elapsed_ms);
+        printf("Forward CONV (ms): %.3f, TFLOPs: %.3f\n", 
+                milliseconds/N, 
+                2*_batch_size*_out_channels*_output_height* _output_width*_filter_height*_filter_width*_in_channels/(milliseconds/N/1e3)/1e12);
 
         return output;
     }
@@ -220,14 +230,19 @@ public:
         // cutlass::Status status = 
         CUTLASS_CHECK(gemm_op.initialize(arguments, workspace.get()));
 
-        std::clock_t c_start = std::clock();
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
 
         CUTLASS_CHECK(gemm_op());
         
-        std::clock_t c_end = std::clock();
-        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
 
-        printf("Forward FC (ms): %.3f\n", time_elapsed_ms);
+        printf("Forward FC (ms): %.3f\n", milliseconds);
 
         return output;
     }
@@ -331,7 +346,10 @@ class POOL{
 
     cuDNNtype* forward(cuDNNtype* input){
 
-        std::clock_t c_start = std::clock();
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
 
         checkCUDNN(cudnnPoolingForward(*cudnn,         
                                         pooling_desc,  
@@ -342,9 +360,12 @@ class POOL{
                                         output_desc,   
                                         output));   
 
-        std::clock_t c_end = std::clock();
-        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
-        printf("Forward Pooling (ms): %.3f\n", time_elapsed_ms);
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+
+        printf("Forward Pooling (ms): %.3f\n", milliseconds);
 
         return output;
     }
@@ -432,7 +453,10 @@ public:
 
     cuDNNtype* forward(cuDNNtype* input){
 
-        std::clock_t c_start = std::clock();
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
 
         checkCUDNN( cudnnActivationForward(
                     *cudnn,
@@ -443,9 +467,15 @@ public:
                     &beta,
                     output_desc,
                     output) );   
-        std::clock_t c_end = std::clock();
-        float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
-        printf("Forward ReLU (ms): %.3f\n", time_elapsed_ms);
+
+
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+      
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+
+        printf("Forward ReLU (ms): %.3f\n", milliseconds);
         
         return output;
     }
@@ -478,4 +508,190 @@ private:
 
 };
 
+
+// https://docs.nvidia.com/deeplearning/cudnn/api/index.html#cudnnBatchNormalizationForwardInference
+
+//
+// BN Layer
+//
+class BN{
+public:
+    BN(int batch_size, int in_channels, int input_height, int input_width, 
+        cudnnHandle_t* cuDNN_handler, bool residual=false, cuDNNtype*residual_tensor=NULL)
+    {
+
+        cudnn = cuDNN_handler;
+        _batch_size = batch_size;
+        _in_channels = in_channels;
+        _input_height = input_height;
+        _input_width = input_width;    
+        _residual = residual;
+        _residual_tensor = residual_tensor;
+
+        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(cuDNNtype);
+
+        _init();
+        printf("Init ReLU (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
+    }
+
+    ~BN(){
+        cudaFree(output);
+    }
+
+    void _init() {
+
+        checkCUDNN( cudnnCreateActivationDescriptor(&activDesc));
+        checkCUDNN( cudnnSetActivationDescriptor(activDesc,
+                                                CUDNN_ACTIVATION_RELU,
+                                                CUDNN_PROPAGATE_NAN,
+                                                0.0) );
+        
+        checkCUDNN(cudnnCreateTensorDescriptor(&input_desc));
+        checkCUDNN(cudnnCreateTensorDescriptor(&output_desc));
+        checkCUDNN(cudnnCreateTensorDescriptor(&bnScaleBiasMeanVarDesc));
+
+        checkCUDNN(cudnnSetTensor4dDescriptor(
+                    input_desc,             
+                    CUDNN_TENSOR_NCHW,       
+                    CUDNN_DTYPE,            
+                    _batch_size,                       
+                    _in_channels,                      
+                    _input_height,                
+                    _input_width));            
+        checkCUDNN(cudnnSetTensor4dDescriptor(
+                    output_desc,             
+                    CUDNN_TENSOR_NCHW,       
+                    CUDNN_DTYPE,            
+                    _batch_size,                       
+                    _in_channels,                      
+                    _input_height,                
+                    _input_width));  
+
+        checkCUDNN(cudnnSetTensor4dDescriptor(
+                    bnScaleBiasMeanVarDesc,             
+                    CUDNN_TENSOR_NCHW,       
+                    CUDNN_DTYPE,            
+                    1,                       
+                    _in_channels,                      
+                    1,                
+                    1)); 
+                    
+                    
+        cudaMalloc(&bnScale,            _in_channels*sizeof(float));
+        cudaMalloc(&bnBias,             _in_channels*sizeof(float));
+        cudaMalloc(&estimatedMean,      _in_channels*sizeof(float));
+        cudaMalloc(&estimatedVariance,  _in_channels*sizeof(float));
+
+        cudaMalloc(&output, output_bytes);
+    }
+
+    cuDNNtype* forward(cuDNNtype* input){
+
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+
+        // checkCUDNN( cudnnBatchNormalizationForwardInference(
+        //                                     *cudnn,
+        //                                     CUDNN_BATCHNORM_SPATIAL,
+        //                                     &alpha,
+        //                                     &beta,
+        //                                     input_desc,
+        //                                     input,
+        //                                     output_desc,
+        //                                     output,
+        //                                     bnScaleBiasMeanVarDesc,
+        //                                     bnScale,
+        //                                     bnBias,
+        //                                     estimatedMean,
+        //                                     estimatedVariance,
+        //                                     epsilon));   
+
+        if (_residual == false)
+            checkCUDNN( cudnnNormalizationForwardInference(
+                                                *cudnn,
+                                                CUDNN_NORM_PER_CHANNEL,
+                                                CUDNN_NORM_OPS_NORM, //CUDNN_NORM_OPS_NORM_ADD_ACTIVATION
+                                                CUDNN_NORM_ALGO_STANDARD,
+                                                &alpha,
+                                                &beta, 
+                                                input_desc,
+                                                input,
+                                                bnScaleBiasMeanVarDesc,
+                                                bnScale,
+                                                bnBias,
+                                                bnScaleBiasMeanVarDesc,
+                                                estimatedMean,
+                                                estimatedVariance,
+                                                NULL,
+                                                NULL,
+                                                NULL,
+                                                output_desc,
+                                                output,
+                                                epsilon,
+                                                1));
+
+            if  (_residual)
+            checkCUDNN( cudnnNormalizationForwardInference(
+                                                        *cudnn,
+                                                        CUDNN_NORM_PER_CHANNEL,
+                                                        CUDNN_NORM_OPS_NORM_ADD_ACTIVATION, //CUDNN_NORM_OPS_NORM_ADD_ACTIVATION
+                                                        CUDNN_NORM_ALGO_STANDARD,
+                                                        &alpha,
+                                                        &beta, 
+                                                        input_desc,
+                                                        input,
+                                                        bnScaleBiasMeanVarDesc,
+                                                        bnScale,
+                                                        bnBias,
+                                                        bnScaleBiasMeanVarDesc,
+                                                        estimatedMean,
+                                                        estimatedVariance,
+                                                        output_desc,
+                                                         _residual_tensor,
+                                                        activDesc,
+                                                        output_desc,
+                                                        output,
+                                                        epsilon,
+                                                        1));
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+      
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        printf("Forward BN (ms): %.3f\n", milliseconds);
+        
+        return output;
+    }
+
+    int get_output_height(){ return _input_height;}
+    int get_output_width(){ return _input_width; }
+    int get_out_channels(){ return _in_channels; }
+
+private:
+    cudnnHandle_t* cudnn;
+    cudnnTensorDescriptor_t input_desc, output_desc, bnScaleBiasMeanVarDesc;
+    cudnnActivationDescriptor_t  activDesc;
+
+    float alpha = 1.0f;
+    float beta = 0.0f;
+    double epsilon = 0.001;
+    float *bnScale;
+    float *bnBias;
+    float *estimatedMean;
+    float *estimatedVariance;
+    bool _residual;
+
+    int _batch_size;
+    int _in_channels;
+    int _input_height;
+    int _input_width;
+
+    int output_bytes;
+
+    cuDNNtype* input;
+    cuDNNtype* output;
+    cuDNNtype* _residual_tensor;
+};
 #endif
