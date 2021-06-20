@@ -67,12 +67,12 @@ public:
         alpha = ElementComputeEpilogue(1);
         beta = ElementComputeEpilogue(0);
 
-        input_size = cutlass::Tensor4DCoord(_batch_size, _in_channels, _input_height, _input_width);
-        filter_size = cutlass::Tensor4DCoord(_out_channels, _in_channels, _filter_height, _filter_width);
-        padding = cutlass::Tensor4DCoord(1,1,_padding_h,_padding_w);
+        input_size = cutlass::Tensor4DCoord(_batch_size, _input_height, _input_width, _in_channels); // n, h, w, c
+        filter_size = cutlass::Tensor4DCoord(_out_channels, _filter_height, _filter_width, _in_channels); // o, k, k, c
+        padding = cutlass::Tensor4DCoord(1, _padding_h, _padding_w, 1); // n, h, w, c
         conv_stride = cutlass::MatrixCoord(_stride, _stride);
         dilation = cutlass::MatrixCoord(1,1);
-        output_size = cutlass::Tensor4DCoord(_batch_size, _out_channels, _output_height, _output_width);
+        output_size = cutlass::Tensor4DCoord(_batch_size, _output_height, _output_width, _out_channels);
     }
 
     ElementInputA* forward(ElementInputA* input){
@@ -107,7 +107,7 @@ public:
         workspace = cutlass::device_memory::allocation<uint8_t>(workspace_size);
         CUTLASS_CHECK(implicit_gemm_op.initialize(arguments, workspace.get()));
 
-        #define N 100
+        #define N 1
         //
         // Launch initialized CUTLASS kernel
         //
@@ -126,7 +126,7 @@ public:
 
         printf("Forward CONV (ms): %.3f, TFLOPs: %.3f\n", 
                 milliseconds/N, 
-                2*_batch_size*_out_channels*_output_height* _output_width*_filter_height*_filter_width*_in_channels/(milliseconds/N/1e3)/1e12);
+                2.0f*_batch_size*_out_channels*_output_height* _output_width*_filter_height*_filter_width*_in_channels/(milliseconds/N/1e3)/1e12);
 
         return output;
     }

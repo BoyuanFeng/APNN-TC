@@ -19,6 +19,9 @@ all: alexnet  \
 alexnet: src/alexnet.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
+alexnet_old: src/alexnet_old.cu $(DEP)
+	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
+
 vgg_variant: src/vgg_variant.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
@@ -29,7 +32,8 @@ test_layer: src/test_layer.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
 clean:
-	rm -r alexnet \
+	rm -r alexnet_old \
+		  alexnet \
 		  vgg_variant \
-		  resnet18
+		  resnet18 \
 		  test_layer
