@@ -7,9 +7,8 @@
 
 int main(int argc, char*argv[]){
 
-        // float *in_data, *out;
         ElementInputA* in_data;
-        ElementOutput* out;
+        cuDNNtype* out;
     
         int batch_size = 8;
         int in_channels = 32;
@@ -47,6 +46,7 @@ int main(int argc, char*argv[]){
         auto fc_3  = new FC(batch_size, 4096, num_classes);
 
 
+        printf("=============================\n");
         // std::clock_t c_start = std::clock();
 
         // cudaEvent_t start, stop;

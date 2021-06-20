@@ -16,15 +16,10 @@
 #include "cutlass/util/reference/host/convolution.h"
 #include "cutlass/util/tensor_view_io.h"
 
-
-// #define batch_size 8
-
-
-// for CUTLASS configuration. (CONV, FC)
 #define BIT_WIDTH 32
 // #define BIT_WIDTH 16
 // #define BIT_WIDTH 8
-// //#define BIT_WIDTH 4
+// #define BIT_WIDTH 4
 // //#define BIT_WIDTH 1
 
 #if BIT_WIDTH == 32
@@ -35,19 +30,15 @@
 #elif BIT_WIDTH == 16
   typedef cutlass::half_t input_t;
   typedef cutlass::half_t output_t;
-  // typedef half_t input_t;
-  // typedef half_t output_t;
   #define CUDNN_DTYPE CUDNN_DATA_HALF
   typedef __half cuDNNtype;
 #elif BIT_WIDTH == 8
   typedef int8_t input_t;
-  // typedef int32_t output_t;
   typedef int8_t output_t;
   #define CUDNN_DTYPE CUDNN_DATA_INT8
   typedef int8_t cuDNNtype;
 #elif BIT_WIDTH == 4
   typedef cutlass::int4b_t input_t;
-  // typedef int32_t output_t;
   typedef cutlass::int4b_t output_t;
 #elif BIT_WIDTH == 1
   typedef cutlass::uint1b_t input_t;

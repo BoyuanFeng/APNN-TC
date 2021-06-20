@@ -531,7 +531,7 @@ public:
         output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(cuDNNtype);
 
         _init();
-        printf("Init ReLU (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
+        printf("Init BN (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
     }
 
     ~BN(){
