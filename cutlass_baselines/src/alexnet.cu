@@ -8,7 +8,7 @@
 int main(int argc, char*argv[]){
 
         ElementInputA* in_data;
-        cuDNNtype* out;
+        ElementOutput* out;
     
         int batch_size = 8;
         int in_channels = 32;
@@ -41,7 +41,7 @@ int main(int argc, char*argv[]){
         auto relu_5  = new RELU(batch_size, conv_5->get_out_channels(), conv_5->get_output_height(), conv_5->get_output_width(), &cudnn);
         auto pool_5  = new POOL(batch_size, relu_5->get_out_channels(), relu_5->get_output_height(), relu_5->get_output_width(), &cudnn);
 
-        auto fc_1  = new FC(batch_size, relu_5->get_out_channels()*relu_5->get_output_height()*relu_5->get_output_width(), 4096);
+        auto fc_1  = new FC(batch_size, pool_5->get_out_channels()*pool_5->get_output_height()*pool_5->get_output_width(), 4096);
         auto fc_2  = new FC(batch_size, 4096, 4096);
         auto fc_3  = new FC(batch_size, 4096, num_classes);
 
