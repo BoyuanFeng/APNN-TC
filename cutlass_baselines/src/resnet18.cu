@@ -9,7 +9,6 @@ int main(int argc, char*argv[]){
 
         ElementInputA* in_data;
         ElementInputA* out;
-        // cuDNNtype* out;
     
         int batch_size = 8;
         int in_channels = 32;
@@ -103,11 +102,6 @@ int main(int argc, char*argv[]){
         printf("=> Start DNN forward!!\n");
         std::clock_t c_start = std::clock();
 
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        cudaEventRecord(start);
-
         out = conv_1->forward(in_data);  
         out = bn_1->forward(out);
         out = relu_1->forward(out); 
@@ -163,16 +157,10 @@ int main(int argc, char*argv[]){
 
         out = pool_last->forward(out);  
         out = fc_1->forward(out);  
-
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
       
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
-
         std::clock_t c_end = std::clock();
         float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
-        printf("\n---------\nCPU (ms): %.3f, CUDA (ms): %.3f\n", time_elapsed_ms, milliseconds);
+        printf("\n---------\nTime (ms): %.3f\n", time_elapsed_ms);
 
         return 0;
 }
