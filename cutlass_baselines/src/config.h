@@ -16,9 +16,9 @@
 #include "cutlass/util/reference/host/convolution.h"
 #include "cutlass/util/tensor_view_io.h"
 
-#define BIT_WIDTH 32
+// #define BIT_WIDTH 32
 // #define BIT_WIDTH 16
-// #define BIT_WIDTH 8
+#define BIT_WIDTH 8
 
 #if BIT_WIDTH == 32
   typedef float input_t;
@@ -29,7 +29,6 @@
   typedef cutlass::half_t input_t;
   typedef cutlass::half_t output_t;
   #define CUDNN_DTYPE CUDNN_DATA_HALF
-  // typedef __half cuDNNtype;
   typedef cutlass::half_t cuDNNtype;
 #elif BIT_WIDTH == 8
   typedef int8_t input_t;

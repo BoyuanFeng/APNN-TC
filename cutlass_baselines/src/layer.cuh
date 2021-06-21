@@ -570,7 +570,7 @@ public:
         checkCUDNN(cudnnSetTensor4dDescriptor(
                     bnScaleBiasMeanVarDesc,             
                     CUDNN_TENSOR_NCHW,       
-                    CUDNN_DTYPE,            
+                    CUDNN_DATA_FLOAT,            
                     1,                       
                     _in_channels,                      
                     1,                
@@ -592,69 +592,69 @@ public:
         cudaEventCreate(&stop);
         cudaEventRecord(start);
 
-        // checkCUDNN( cudnnBatchNormalizationForwardInference(
-        //                                     *cudnn,
-        //                                     CUDNN_BATCHNORM_SPATIAL,
-        //                                     &alpha,
-        //                                     &beta,
-        //                                     input_desc,
-        //                                     input,
-        //                                     output_desc,
-        //                                     output,
-        //                                     bnScaleBiasMeanVarDesc,
-        //                                     bnScale,
-        //                                     bnBias,
-        //                                     estimatedMean,
-        //                                     estimatedVariance,
-        //                                     epsilon));   
+        checkCUDNN( cudnnBatchNormalizationForwardInference(
+                                            *cudnn,
+                                            CUDNN_BATCHNORM_SPATIAL,
+                                            &alpha,
+                                            &beta,
+                                            input_desc,
+                                            input,
+                                            output_desc,
+                                            output,
+                                            bnScaleBiasMeanVarDesc,
+                                            bnScale,
+                                            bnBias,
+                                            estimatedMean,
+                                            estimatedVariance,
+                                            epsilon));   
 
-        if (_residual == false)
-            checkCUDNN( cudnnNormalizationForwardInference(
-                                                *cudnn,
-                                                CUDNN_NORM_PER_CHANNEL,
-                                                CUDNN_NORM_OPS_NORM, //CUDNN_NORM_OPS_NORM_ADD_ACTIVATION
-                                                CUDNN_NORM_ALGO_STANDARD,
-                                                &alpha,
-                                                &beta, 
-                                                input_desc,
-                                                input,
-                                                bnScaleBiasMeanVarDesc,
-                                                bnScale,
-                                                bnBias,
-                                                bnScaleBiasMeanVarDesc,
-                                                estimatedMean,
-                                                estimatedVariance,
-                                                NULL,
-                                                NULL,
-                                                NULL,
-                                                output_desc,
-                                                output,
-                                                epsilon,
-                                                1));
+        // if (_residual == false)
+        //     checkCUDNN( cudnnNormalizationForwardInference(
+        //                                         *cudnn,
+        //                                         CUDNN_NORM_PER_CHANNEL,
+        //                                         CUDNN_NORM_OPS_NORM, //CUDNN_NORM_OPS_NORM_ADD_ACTIVATION
+        //                                         CUDNN_NORM_ALGO_STANDARD,
+        //                                         &alpha,
+        //                                         &beta, 
+        //                                         input_desc,
+        //                                         input,
+        //                                         bnScaleBiasMeanVarDesc,
+        //                                         bnScale,
+        //                                         bnBias,
+        //                                         bnScaleBiasMeanVarDesc,
+        //                                         estimatedMean,
+        //                                         estimatedVariance,
+        //                                         NULL,
+        //                                         NULL,
+        //                                         NULL,
+        //                                         output_desc,
+        //                                         output,
+        //                                         epsilon,
+        //                                         1));
 
-            if  (_residual)
-            checkCUDNN( cudnnNormalizationForwardInference(
-                                                        *cudnn,
-                                                        CUDNN_NORM_PER_CHANNEL,
-                                                        CUDNN_NORM_OPS_NORM_ADD_ACTIVATION, //CUDNN_NORM_OPS_NORM_ADD_ACTIVATION
-                                                        CUDNN_NORM_ALGO_STANDARD,
-                                                        &alpha,
-                                                        &beta, 
-                                                        input_desc,
-                                                        input,
-                                                        bnScaleBiasMeanVarDesc,
-                                                        bnScale,
-                                                        bnBias,
-                                                        bnScaleBiasMeanVarDesc,
-                                                        estimatedMean,
-                                                        estimatedVariance,
-                                                        output_desc,
-                                                         _residual_tensor,
-                                                        activDesc,
-                                                        output_desc,
-                                                        output,
-                                                        epsilon,
-                                                        1));
+            // if  (_residual)
+            // checkCUDNN( cudnnNormalizationForwardInference(
+            //                                             *cudnn,
+            //                                             CUDNN_NORM_PER_CHANNEL,
+            //                                             CUDNN_NORM_OPS_NORM_ADD_ACTIVATION, //CUDNN_NORM_OPS_NORM_ADD_ACTIVATION
+            //                                             CUDNN_NORM_ALGO_STANDARD,
+            //                                             &alpha,
+            //                                             &beta, 
+            //                                             input_desc,
+            //                                             input,
+            //                                             bnScaleBiasMeanVarDesc,
+            //                                             bnScale,
+            //                                             bnBias,
+            //                                             bnScaleBiasMeanVarDesc,
+            //                                             estimatedMean,
+            //                                             estimatedVariance,
+            //                                             output_desc,
+            //                                              _residual_tensor,
+            //                                             activDesc,
+            //                                             output_desc,
+            //                                             output,
+            //                                             epsilon,
+            //                                             1));
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
       
@@ -676,7 +676,7 @@ private:
 
     float alpha = 1.0f;
     float beta = 0.0f;
-    double epsilon = 0.001;
+    double epsilon = 0.001f;
     float *bnScale;
     float *bnBias;
     float *estimatedMean;
