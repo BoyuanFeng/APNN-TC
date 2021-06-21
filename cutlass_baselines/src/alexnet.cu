@@ -8,7 +8,7 @@
 int main(int argc, char*argv[]){
 
         ElementInputA* in_data;
-        ElementInputA* out;
+        cuDNNtype* out;
     
         int batch_size = 8;
         int in_channels = 32;

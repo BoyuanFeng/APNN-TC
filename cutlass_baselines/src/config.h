@@ -16,11 +16,9 @@
 #include "cutlass/util/reference/host/convolution.h"
 #include "cutlass/util/tensor_view_io.h"
 
-// #define BIT_WIDTH 32
+#define BIT_WIDTH 32
 // #define BIT_WIDTH 16
-#define BIT_WIDTH 8
-// #define BIT_WIDTH 4
-// //#define BIT_WIDTH 1
+// #define BIT_WIDTH 8
 
 #if BIT_WIDTH == 32
   typedef float input_t;
@@ -31,18 +29,13 @@
   typedef cutlass::half_t input_t;
   typedef cutlass::half_t output_t;
   #define CUDNN_DTYPE CUDNN_DATA_HALF
-  typedef __half cuDNNtype;
+  // typedef __half cuDNNtype;
+  typedef cutlass::half_t cuDNNtype;
 #elif BIT_WIDTH == 8
   typedef int8_t input_t;
   typedef int8_t output_t;
   #define CUDNN_DTYPE CUDNN_DATA_INT8
   typedef int8_t cuDNNtype;
-#elif BIT_WIDTH == 4
-  typedef cutlass::int4b_t input_t;
-  typedef cutlass::int4b_t output_t;
-#elif BIT_WIDTH == 1
-  typedef cutlass::uint1b_t input_t;
-  typedef int32_t output_t;
 #endif
 
 // The code section below describes datatype for input, output matrices and computation between

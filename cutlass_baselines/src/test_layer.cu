@@ -20,10 +20,10 @@ int main(int argc, char*argv[]){
     int stride = 1;
 
     // for CUTLASS test
-    int in_bytes = batch_size * in_channels * input_height * input_width * sizeof(ElementInputA);
-    cudaMalloc(&in_data, in_bytes);
-    auto conv  = new CONV(batch_size, input_height, input_width, in_channels, out_channels, filter_height, filter_width, stride, 1);
-    out = conv->forward(in_data);
+    // int in_bytes = batch_size * in_channels * input_height * input_width * sizeof(ElementInputA);
+    // cudaMalloc(&in_data, in_bytes);
+    // auto conv  = new CONV(batch_size, input_height, input_width, in_channels, out_channels, filter_height, filter_width, stride, 1);
+    // out = conv->forward(in_data);
     // auto fc  = new FC(batch_size, in_channels*input_height*input_width, out_channels);
     // out = fc->forward(in_data);
 
@@ -31,18 +31,18 @@ int main(int argc, char*argv[]){
     // for cuDNN test.
     // set the pooling layer for evaluation.
     
-    // int in_bytes = batch_size * in_channels * input_height * input_width * sizeof(cuDNNtype);
-    // cudaMalloc(&in_data, in_bytes);
-    // cudnnHandle_t cudnn;
-    // checkCUDNN(cudnnCreate(&cudnn));
+    int in_bytes = batch_size * in_channels * input_height * input_width * sizeof(cuDNNtype);
+    cudaMalloc(&in_data, in_bytes);
+    cudnnHandle_t cudnn;
+    checkCUDNN(cudnnCreate(&cudnn));
 
-    // auto bn = new BN(batch_size, in_channels, input_height, input_width, &cudnn);
+    auto bn = new BN(batch_size, in_channels, input_height, input_width, &cudnn);
     // auto pool = new POOL(batch_size, in_channels, input_height, input_width, &cudnn);
     // auto relu = new RELU(batch_size, in_channels, pool->get_output_height(), pool->get_output_width(), &cudnn);
 
+    out = bn->forward(in_data);
     // out = pool->forward(in_data);
     // out = relu->forward(in_data);
-    // out = bn->forward(in_data);
 
     return 0;
 }
