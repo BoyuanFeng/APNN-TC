@@ -77,6 +77,7 @@ public:
 
     ElementInputA* forward(ElementInputA* input){
 
+
         input_tensor_ref = cutlass::TensorRef<ElementInputA, LayoutInputA>(input); 
 
         // runnking kernel.
@@ -100,7 +101,6 @@ public:
         //
         // Initialize CUTLASS Convolution
         //
-        // implicit_gemm_op;
         workspace_size = implicit_gemm_op.get_workspace_size(arguments);
 
         // Allocate workspace memory
@@ -123,11 +123,10 @@ public:
         cudaEventSynchronize(stop);
         float milliseconds = 0;
         cudaEventElapsedTime(&milliseconds, start, stop);
-
-        printf("Forward CONV (ms): %.3f, TFLOPs: %.3f\n", 
-                milliseconds/N, 
-                2.0f*_batch_size*_out_channels*_output_height* _output_width*_filter_height*_filter_width*_in_channels/(milliseconds/N/1e3)/1e12);
-
+        printf("Forward CONV (ms): %.3f\n", milliseconds/N); 
+        // printf("Forward CONV (ms): %.3f, TFLOPs: %.3f\n", 
+        //         milliseconds/N, 
+        //         2.0f*_batch_size*_out_channels*_output_height* _output_width*_filter_height*_filter_width*_in_channels/(milliseconds/N/1e3)/1e12);
         return output;
     }
 
@@ -294,7 +293,7 @@ class POOL{
         _output_height = (_input_height - _kernel_size)/stride+1;
         _output_width = (_input_width - _kernel_size)/stride+1;
 
-        output_bytes = _batch_size*_in_channels*_output_height*_output_width*sizeof(cuDNNtype);
+        output_bytes = _batch_size*_in_channels*_output_height*_output_width*sizeof(ElementInputA);
 
         _init();
 
@@ -344,7 +343,7 @@ class POOL{
         cudaMalloc(&output, output_bytes);
     }
 
-    cuDNNtype* forward(cuDNNtype* input){
+    ElementInputA* forward(ElementInputA* input){
 
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
@@ -373,6 +372,7 @@ class POOL{
     int get_output_height(){ return _output_height;}
     int get_output_width(){ return _output_width; }
     int get_out_channels(){ return _in_channels; }
+    
 private:
     cudnnHandle_t* cudnn;
     cudnnPoolingDescriptor_t pooling_desc;
@@ -391,9 +391,9 @@ private:
 
     int output_bytes;
 
-    cuDNNtype* input;
-    cuDNNtype* filter;
-    cuDNNtype* output;
+    ElementInputA* input;
+    ElementInputA* filter;
+    ElementInputA* output;
 };
 
 //
@@ -410,7 +410,7 @@ public:
         _input_height = input_height;
         _input_width = input_width;     
 
-        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(cuDNNtype);
+        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(ElementInputA);
 
         _init();
         printf("Init ReLU (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
@@ -451,7 +451,7 @@ public:
         cudaMalloc(&output, output_bytes);
     }
 
-    cuDNNtype* forward(cuDNNtype* input){
+    ElementInputA* forward(ElementInputA* input){
 
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
@@ -503,8 +503,8 @@ private:
 
     int output_bytes;
 
-    cuDNNtype* input;
-    cuDNNtype* output;
+    ElementInputA* input;
+    ElementInputA* output;
 
 };
 
@@ -517,7 +517,7 @@ private:
 class BN{
 public:
     BN(int batch_size, int in_channels, int input_height, int input_width, 
-        cudnnHandle_t* cuDNN_handler, bool residual=false, cuDNNtype*residual_tensor=NULL)
+        cudnnHandle_t* cuDNN_handler, bool residual=false, ElementInputA*residual_tensor=NULL)
     {
 
         cudnn = cuDNN_handler;
@@ -528,7 +528,7 @@ public:
         _residual = residual;
         _residual_tensor = residual_tensor;
 
-        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(cuDNNtype);
+        output_bytes = _batch_size*_in_channels*_input_height*_input_width*sizeof(ElementInputA);
 
         _init();
         printf("Init BN (n,c,h,w): %d,%d,%d,%d\n",_batch_size, _in_channels, _input_height, _input_width);
@@ -585,7 +585,7 @@ public:
         cudaMalloc(&output, output_bytes);
     }
 
-    cuDNNtype* forward(cuDNNtype* input){
+    ElementInputA* forward(ElementInputA* input){
 
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
@@ -690,8 +690,8 @@ private:
 
     int output_bytes;
 
-    cuDNNtype* input;
-    cuDNNtype* output;
-    cuDNNtype* _residual_tensor;
+    ElementInputA* input;
+    ElementInputA* output;
+    ElementInputA* _residual_tensor;
 };
 #endif
