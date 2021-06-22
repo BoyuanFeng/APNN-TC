@@ -110,6 +110,7 @@ int main()
 {
     int dev = 0;
     cudaSetDevice(dev);
+    
     const unsigned batch = 8;
     const unsigned output_size = 1000;
     const unsigned image_height = 224;

@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <ctime>
 #include <iostream>
 #include <string>
 #include <cooperative_groups.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
+
 #include "utility.h"
 #include "param.h"
 #include "kernel.cuh"
@@ -73,8 +75,8 @@ int main()
     const unsigned image_width = 224;
     const unsigned image_channel = 3;
     const unsigned n_hidden = 4096;
-    int w_bit = 1;
-    int a_bit = 2;
+    int w_bit = 2;
+    int a_bit = 8;
 
     //=============== Get Input and Label =================
     float* images = (float*)malloc(batch*image_height*image_width*image_channel*sizeof(float));
@@ -138,7 +140,7 @@ int main()
     cudaGetDeviceProperties(&deviceProp, dev);
     int numBlocksPerSm;
 //     int shared_memory = 512*sizeof(int)*32;
-    int shared_memory = 64 * 1e3; // 64KB
+    int shared_memory = 96 * 1e3; // 64KB
     
     cudaFuncSetAttribute(alexnet128, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
     cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, alexnet128, numThreads, shared_memory);
@@ -147,23 +149,30 @@ int main()
         &bfc1_gpu, &bfc2_gpu, &bout_gpu};
 
     printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
-    START_TIMER;
+
+    std::clock_t c_start = std::clock();
+    // START_TIMER;
 
     cudaLaunchCooperativeKernel((void*)alexnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 
             numThreads, args, shared_memory);
 
-    STOP_TIMER;
-
+    // STOP_TIMER;
+    cudaDeviceSynchronize(); 
     cudaError_t err = cudaGetLastError();
+
+    std::clock_t c_end = std::clock();
+    float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+    printf("\n==============\n AlexNet (ms): %.3f\n", time_elapsed_ms);
+
 
     if ( err != cudaSuccess ){
        printf("CUDA Error: %s\n", cudaGetErrorString(err));       
        exit(-1);
     }
 
-    printf("Alexnet_b%d (ms): %.3f\n", batch, milliseconds);
+    // printf("Alexnet_b%d (ms): %.3f\n", batch, milliseconds);
     //================ Output =================
-    float* output = bout->download_output();
+    // float* output = bout->download_output();
     //validate_prediction(output, image_labels, output_size, batch);
 
     /*

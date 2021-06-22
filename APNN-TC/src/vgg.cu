@@ -126,8 +126,8 @@ int main()
     const unsigned filter_height = 3;
     const unsigned filter_width = 3;
     const unsigned n_hidden = 4096;
-    int a_bit = 2;
     int w_bit = 1;
+    int a_bit = 2;
 
     //=============== Get Input and Label =================
     float* images = (float*)malloc(batch*image_height*image_width*image_channel*sizeof(float));
@@ -256,8 +256,6 @@ int main()
 
     cudaLaunchCooperativeKernel((void*)vggnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 
             numThreads, args, shared_memory);
-    //vggnet128<<<numBlocksPerSm*deviceProp.multiProcessorCount, numThreads, shared_memory>>> (
-    //bconv1_gpu, bconv2_gpu, bconv3_gpu, bconv4_gpu, bconv5_gpu, bfc1_gpu, bfc2_gpu, bout_gpu);
 
     STOP_TIMER;
     printf("VGG_b%d (ms): %.3f\n", batch, milliseconds);
