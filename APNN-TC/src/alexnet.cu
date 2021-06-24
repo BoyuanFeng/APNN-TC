@@ -60,7 +60,6 @@ __global__ void alexnet128(
     //========== Output ===========
 //     Out128Layer(bout);
     Output_new(bout);
-
 }
 // #endif
 
@@ -95,7 +94,7 @@ int main()
     // Bconv1 Layer
     uin32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
     Conv128LayerParam* bconv1 = new Conv128LayerParam("Conv1", image_height, image_width, 
-    11, 11, 3, 64, batch, 4, 4, true, 2, 2); 
+                                    11, 11, 3, 64, batch, 4, 4, true, 2, 2); 
     Conv128LayerParam* bconv1_gpu = bconv1->initialize(config_file, lowBit_image_gpu);
 
     //Bconv2 Layer
@@ -135,12 +134,11 @@ int main()
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc2->get_output_gpu());  
 
     //================ Setup Kernel =================
-    int numThreads = 128;
+    int numThreads = 256;
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, dev);
     int numBlocksPerSm;
-//     int shared_memory = 512*sizeof(int)*32;
-    int shared_memory = 96 * 1e3; // 64KB
+    int shared_memory = 65536; // 64KB
     
     cudaFuncSetAttribute(alexnet128, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
     cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, alexnet128, numThreads, shared_memory);
@@ -153,7 +151,7 @@ int main()
     std::clock_t c_start = std::clock();
     // START_TIMER;
 
-    cudaLaunchCooperativeKernel((void*)alexnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 
+    cudaLaunchCooperativeKernel((void*)alexnet128, deviceProp.multiProcessorCount, 
             numThreads, args, shared_memory);
 
     // STOP_TIMER;
@@ -169,22 +167,6 @@ int main()
        printf("CUDA Error: %s\n", cudaGetErrorString(err));       
        exit(-1);
     }
-
-    // printf("Alexnet_b%d (ms): %.3f\n", batch, milliseconds);
-    //================ Output =================
-    // float* output = bout->download_output();
-    //validate_prediction(output, image_labels, output_size, batch);
-
-    /*
-    float* out = bconv2->download_full_output();
-    //for (int i=0; i<512; i++)
-    for (int i=4096; i<4096+512; i++)
-    {
-        printf("%.f ", out[i]);
-        if ((i+1)%32==0) printf("\n");
-    }
-    printf("\n===%f===\n", bout->bn_scale[0]);
-    */
 
     delete bconv1;
     delete bconv2;
