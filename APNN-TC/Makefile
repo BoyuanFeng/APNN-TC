@@ -16,6 +16,12 @@ vgg: src/vgg.cu $(DEP)
 resnet18: src/resnet18.cu $(DEP)
 	$(NVCC) $(NVCC_FLAG) $(INC) -o $@ src/resnet18.cu src/data.cpp $(LIBS)
 
+.PHONY: test clean
+test:
+	./alexnet
+	./vgg
+	./resnet18
+
 clean:
 	rm alexnet \
 		vgg \

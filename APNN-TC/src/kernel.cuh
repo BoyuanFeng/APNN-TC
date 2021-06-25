@@ -9,9 +9,9 @@
 
 #include "param.h"
 
-#define w1a2
+// #define w1a2
 // #define w2a2
-// #define w2a8
+#define w2a8
 
 #ifdef w1a2
 #define w_bit 1

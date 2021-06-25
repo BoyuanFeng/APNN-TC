@@ -74,6 +74,18 @@ __global__ void vggnet128(
     // Conv128Layer(bconv10);
     Conv_new(bconv10);
     grid.sync();
+    //========= Conv11 ============
+    // Conv128Layer(bconv11);
+    Conv_new(bconv11);
+    grid.sync();
+    //========= Conv12 ============
+    // Conv128Layer(bconv12);
+    Conv_new(bconv12);
+    grid.sync();
+    //========= Conv13 ============
+    // Conv128Layer(bconv13);
+    Conv_new(bconv13);
+    grid.sync();
     //========= Fc1 ============
 //     Fc128Layer(bfc1);
     FC_new(bfc1);
@@ -116,60 +128,53 @@ int main()
     // InConv128LayerParam* bconv1_gpu = bconv1->initialize(images, config_file);
 
     uin32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
-    
-    
     Conv128LayerParam* bconv1 = new Conv128LayerParam("Conv1", image_height, image_width, 
-        filter_height, filter_width, 3, 96, batch, 2, 2, true, 2, 2); 
+        filter_height, filter_width, 3, 64, batch); 
     Conv128LayerParam* bconv1_gpu = bconv1->initialize(config_file, lowBit_image_gpu);
-
-
 
     //Bconv2 Layer
     Conv128LayerParam* bconv2 = new Conv128LayerParam("Conv2", bconv1->output_height, 
-            bconv1->output_width, filter_height, filter_width, 96, 256, batch, 1, 1,
-            true, 1, 1, false, 
+            bconv1->output_width, filter_height, filter_width, 64, 64, batch, 1, 1,
+            true, 2, 2, false, 
             false, false, 0, false, a_bit, w_bit
-        );    
+        );
+        
     Conv128LayerParam* bconv2_gpu = bconv2->initialize(config_file, bconv1->get_output_gpu());
     //Bconv3 Layer
     Conv128LayerParam* bconv3 = new Conv128LayerParam("Conv3", bconv2->output_height, 
-            bconv2->output_width, filter_height, filter_width, 256, 256, batch,
+            bconv2->output_width, filter_height, filter_width, 64, 128, batch,
             1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
         );
     Conv128LayerParam* bconv3_gpu = bconv3->initialize(config_file, bconv2->get_output_gpu());
     //Bconv4 Layer
     Conv128LayerParam* bconv4 = new Conv128LayerParam("Conv4", bconv3->output_height, 
-            bconv3->output_width, filter_height, filter_width, 256, 256, batch, 1, 1,
+            bconv3->output_width, filter_height, filter_width, 128, 128, batch, 1, 1,
             true, 2, 2, false,
             false, false, 0, false, a_bit, w_bit
         );
     Conv128LayerParam* bconv4_gpu = bconv4->initialize(config_file, bconv3->get_output_gpu());
-    
-    
     //Bconv5 Layer
     Conv128LayerParam* bconv5 = new Conv128LayerParam("Conv5", bconv4->output_height, 
-            bconv4->output_width, filter_height, filter_width, 256, 512, batch,
+            bconv4->output_width, filter_height, filter_width, 128, 256, batch,
             1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
         );
     Conv128LayerParam* bconv5_gpu = bconv5->initialize(config_file, bconv4->get_output_gpu());
     //Bconv6 Layer
     Conv128LayerParam* bconv6 = new Conv128LayerParam("Conv6", bconv5->output_height, 
-            bconv5->output_width, filter_height, filter_width, 512, 512, batch,
+            bconv5->output_width, filter_height, filter_width, 256, 256, batch,
             1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
         );
     Conv128LayerParam* bconv6_gpu = bconv6->initialize(config_file, bconv5->get_output_gpu());
     //Bconv7 Layer
     Conv128LayerParam* bconv7 = new Conv128LayerParam("Conv7", bconv6->output_height, 
-            bconv6->output_width, filter_height, filter_width, 512, 512, batch, 1, 1,
+            bconv6->output_width, filter_height, filter_width, 256, 256, batch, 1, 1,
             true, 2, 2, false,
             false, false, 0, false, a_bit, w_bit
         );
     Conv128LayerParam* bconv7_gpu = bconv7->initialize(config_file, bconv6->get_output_gpu());
-   
-   
     //Bconv8 Layer
     Conv128LayerParam* bconv8 = new Conv128LayerParam("Conv8", bconv7->output_height, 
-            bconv7->output_width, filter_height, filter_width, 512, 512, batch,
+            bconv7->output_width, filter_height, filter_width, 256, 512, batch,
             1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
         );
     Conv128LayerParam* bconv8_gpu = bconv8->initialize(config_file, bconv7->get_output_gpu());
@@ -187,29 +192,28 @@ int main()
         );
     Conv128LayerParam* bconv10_gpu = bconv10->initialize(config_file, bconv9->get_output_gpu());
     //Bconv11 Layer
-    // Conv128LayerParam* bconv11 = new Conv128LayerParam("Conv11", bconv10->output_height, 
-    //         bconv10->output_width, filter_height, filter_width, 512, 512, batch,
-    //         1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
-    //     );
-    // Conv128LayerParam* bconv11_gpu = bconv11->initialize(config_file, bconv10->get_output_gpu());
-    // //Bconv12 Layer
-    // Conv128LayerParam* bconv12 = new Conv128LayerParam("Conv12", bconv11->output_height, 
-    //         bconv11->output_width, filter_height, filter_width, 512, 512, batch,
-    //         1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
-    //     );
-    // Conv128LayerParam* bconv12_gpu = bconv12->initialize(config_file, bconv11->get_output_gpu());
-    // //Bconv13 Layer
-    // Conv128LayerParam* bconv13 = new Conv128LayerParam("Conv13", bconv12->output_height, 
-    //         bconv12->output_width, filter_height, filter_width, 512, 512, batch, 1, 1,
-    //         true, 2, 2, true,
-    //         false, false, 0, false, a_bit, w_bit
-    //     );
-    // Conv128LayerParam* bconv13_gpu = bconv13->initialize(config_file, bconv12->get_output_gpu());
-    
+    Conv128LayerParam* bconv11 = new Conv128LayerParam("Conv11", bconv10->output_height, 
+            bconv10->output_width, filter_height, filter_width, 512, 512, batch,
+            1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
+        );
+    Conv128LayerParam* bconv11_gpu = bconv11->initialize(config_file, bconv10->get_output_gpu());
+    //Bconv12 Layer
+    Conv128LayerParam* bconv12 = new Conv128LayerParam("Conv12", bconv11->output_height, 
+            bconv11->output_width, filter_height, filter_width, 512, 512, batch,
+            1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
+        );
+    Conv128LayerParam* bconv12_gpu = bconv12->initialize(config_file, bconv11->get_output_gpu());
+    //Bconv13 Layer
+    Conv128LayerParam* bconv13 = new Conv128LayerParam("Conv13", bconv12->output_height, 
+            bconv12->output_width, filter_height, filter_width, 512, 512, batch, 1, 1,
+            true, 2, 2, true,
+            false, false, 0, false, a_bit, w_bit
+        );
+    Conv128LayerParam* bconv13_gpu = bconv13->initialize(config_file, bconv12->get_output_gpu());
     //Fc1 Layer
-    Fc128LayerParam* bfc1 = new Fc128LayerParam("Fc1", batch, (bconv10->output_height)
-            *(bconv10->output_width)*512, n_hidden, a_bit, w_bit); 
-    Fc128LayerParam* bfc1_gpu = bfc1->initialize(config_file, bconv10->get_output_gpu());
+    Fc128LayerParam* bfc1 = new Fc128LayerParam("Fc1", batch, (bconv13->output_height)
+            *(bconv13->output_width)*512, n_hidden, a_bit, w_bit); 
+    Fc128LayerParam* bfc1_gpu = bfc1->initialize(config_file, bconv13->get_output_gpu());
     //Fc2 Layer
     Fc128LayerParam* bfc2 = new Fc128LayerParam("Fc2", batch, n_hidden, n_hidden, a_bit, w_bit); 
     Fc128LayerParam* bfc2_gpu = bfc2->initialize(config_file, bfc1->get_output_gpu());
@@ -228,7 +232,8 @@ int main()
     cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, vggnet128, numThreads, shared_memory);
 
     void* args[] = {&bconv1_gpu, &bconv2_gpu, &bconv3_gpu, &bconv4_gpu, &bconv5_gpu, &bconv6_gpu,
-        &bconv7_gpu, &bconv8_gpu, &bconv9_gpu, &bconv10_gpu, &bfc1_gpu, &bfc2_gpu, &bout_gpu};
+        &bconv7_gpu, &bconv8_gpu, &bconv9_gpu, &bconv10_gpu, &bconv11_gpu, &bconv12_gpu, &bconv13_gpu,
+        &bfc1_gpu, &bfc2_gpu, &bout_gpu};
 
     // shared_memory = 84 * 1e3; // 96KB
     printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
@@ -240,6 +245,20 @@ int main()
     STOP_TIMER;
     printf("VGG_b%d (ms): %.3f\n", batch, milliseconds);
 
+    // float* output = bout->download_output();
+    //validate_prediction(output, image_labels, output_size, batch);
+
+    /*
+    float* out = bconv2->download_full_output();
+    for (int i=0; i<512; i++)
+    //for (int i=4096; i<4096+512; i++)
+    {
+        printf("%.f ", out[i]);
+        if ((i+1)%32==0) printf("\n");
+    }
+    printf("\n===%f===\n", bout->bn_scale[0]);
+    */
+
     delete bconv1;
     delete bconv2;
     delete bconv3;
@@ -250,6 +269,9 @@ int main()
     delete bconv8;
     delete bconv9;
     delete bconv10;
+    delete bconv11;
+    delete bconv12;
+    delete bconv13;
     delete bfc1;
     delete bfc2;
     delete bout;
