@@ -9,9 +9,9 @@
 
 #include "param.h"
 
-// #define w1a2
+#define w1a2
 // #define w2a2
-#define w2a8
+// #define w2a8
 
 #ifdef w1a2
 #define w_bit 1
@@ -174,6 +174,10 @@ uin32* images_quantization(float* images, int batch, int image_width,
     Bit_compression<<<grid_size, block_size>>>(bit_images_gpu, quant_images_gpu, \
                                         batch, image_height, image_width, image_channel,  \
                                         bit);
+
+    SAFE_FREE_GPU(images_gpu);
+    SAFE_FREE_GPU(quant_images_gpu);
+
     return bit_images_gpu;
 }
 
@@ -185,7 +189,7 @@ void filter_quantization(uin32* bit_filter_gpu, float* filter_gpu,
     *  quantize a float-based CONV filter to low-bit filter.
     */
     uin32* quant_filter_gpu;
-    int total_size = out_channel*filter_height*filter_width*in_channel;
+    int total_size = out_channel*filter_height*filter_width*PAD128(in_channel);
 
     SAFE_ALOC_GPU(quant_filter_gpu, total_size*sizeof(uin32));
 
@@ -200,7 +204,7 @@ void filter_quantization(uin32* bit_filter_gpu, float* filter_gpu,
     CUDA_SAFE_CALL( cudaDeviceSynchronize() );
 
     // Low-bit compression.
-    SAFE_ALOC_GPU(bit_filter_gpu, bit*total_size*PAD128(in_channel)*sizeof(uin32)/32);
+    SAFE_ALOC_GPU(bit_filter_gpu, bit*total_size*sizeof(uin32)/32);
     block_size = 1024;
     grid_size = (out_channel*filter_height*filter_width*32 + block_size - 1)/block_size;
 
@@ -211,7 +215,6 @@ void filter_quantization(uin32* bit_filter_gpu, float* filter_gpu,
     CUDA_SAFE_CALL( cudaPeekAtLastError() );
     CUDA_SAFE_CALL( cudaDeviceSynchronize() );
     SAFE_FREE_GPU(quant_filter_gpu);
-    // return bit_filter_gpu;
 }
 
 
@@ -293,6 +296,8 @@ void weight_quantization_fc_hidden(uin32* bit_weight_gpu, float* weight_gpu,
 
     CUDA_SAFE_CALL( cudaPeekAtLastError() );
     CUDA_SAFE_CALL( cudaDeviceSynchronize() );
+
+    SAFE_FREE_GPU(weight_gpu);
     SAFE_FREE_GPU(quant_weight_gpu);
     // return bit_weight_gpu;
 }

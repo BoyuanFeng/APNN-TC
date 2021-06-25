@@ -291,9 +291,8 @@ class Fc128LayerParam
             //         weight_float, weight_gpu, weight_height, weight_width);
 
             weight_quantization_fc_hidden(weight_gpu, weight_float, weight_height, weight_width, _w_bit);
-
             CUDA_CHECK_KERNEL();
-            SAFE_FREE_GPU(weight_float);
+
             //Process bn
             SAFE_ALOC_HOST(bn, bn_bytes());
             launch_array(config_file, this->bn, bn_size());
@@ -905,10 +904,10 @@ class Conv128LayerParam
             output_residual_gpu(NULL), input_residual_gpu(NULL), _a_bit(a_bit), _w_bit(w_bit)
                 
         {
-            #ifdef NN_INFO
-            printf("%d, %d, %d, %d, %d, %d\n", input_height, input_width,
+            // #ifdef NN_INFO
+            printf("%s, %d, %d, %d, %d, %d, %d\n", name, input_height, input_width,
                     input_channels, output_channels,  filter_height, filter_width);
-            #endif
+            // #endif
 
             strncpy(this->name, name, 8);
             this->pad_h = padding?((( (input_height+stride_height-(input_height%stride_height))

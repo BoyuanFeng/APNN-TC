@@ -151,7 +151,7 @@ int main()
             true, 2, 2, false, 
             false, false, 0, false, a_bit, w_bit
         );
-
+        
     Conv128LayerParam* bconv2_gpu = bconv2->initialize(config_file, bconv1->get_output_gpu());
     //Bconv3 Layer
     Conv128LayerParam* bconv3 = new Conv128LayerParam("Conv3", bconv2->output_height, 
