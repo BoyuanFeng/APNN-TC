@@ -74,8 +74,7 @@ int main()
     const unsigned image_width = 224;
     const unsigned image_channel = 3;
     const unsigned n_hidden = 4096;
-    int w_bit = 2;
-    int a_bit = 8;
+
 
     //=============== Get Input and Label =================
     float* images = (float*)malloc(batch*image_height*image_width*image_channel*sizeof(float));
@@ -94,7 +93,7 @@ int main()
     // Bconv1 Layer
     uin32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
     Conv128LayerParam* bconv1 = new Conv128LayerParam("Conv1", image_height, image_width, 
-                                    11, 11, 3, 64, batch, 4, 4, true, 2, 2); 
+            11, 11, 3, 64, batch, 4, 4, true, 2, 2); 
     Conv128LayerParam* bconv1_gpu = bconv1->initialize(config_file, lowBit_image_gpu);
 
     //Bconv2 Layer

@@ -925,7 +925,7 @@ class Conv128LayerParam
         }
         int input_size() { return input_channels*input_height*input_width*batch;}
         int input_bytes() { return input_size()*sizeof(uin32);}
-        int input_bit_size() { return (input_channels)*input_height*input_width*PAD8(batch); }
+        int input_bit_size() { return PAD128(input_channels)*input_height*input_width*PAD8(batch); }
         int input_bit_bytes() { return _a_bit*input_bit_size()*sizeof(uin128);}
         int filter_size() { return output_channels*input_channels*filter_height*filter_width;}
         int filter_bytes() { return filter_size()*sizeof(float);}
@@ -934,7 +934,7 @@ class Conv128LayerParam
         int filter_bit_bytes() { return _w_bit*filter_bit_size()*sizeof(uin128);}
         int output_size() { return output_channels*output_height*output_width*batch;}
         int output_bytes() { return output_size()*sizeof(uin32);}
-        int output_bit_size() { return (output_channels)*output_height
+        int output_bit_size() { return PAD128(output_channels)*output_height
             *output_width*PAD8(batch); }
         int output_bit_bytes() { return _a_bit*output_bit_size()*sizeof(uin128); }
         int bn_size() { return output_channels;}

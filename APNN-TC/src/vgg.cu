@@ -126,8 +126,6 @@ int main()
     const unsigned filter_height = 3;
     const unsigned filter_width = 3;
     const unsigned n_hidden = 4096;
-    int w_bit = 1;
-    int a_bit = 2;
 
     //=============== Get Input and Label =================
     float* images = (float*)malloc(batch*image_height*image_width*image_channel*sizeof(float));

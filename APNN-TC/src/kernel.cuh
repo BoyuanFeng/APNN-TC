@@ -14,21 +14,26 @@
 #define w2a8
 
 #ifdef w1a2
+#define w_bit 1
+#define a_bit 2
 // #include "12_bmmaTensorCoreGemm.cuh" // for w1a1 GEMM
 #include "67_bmmaTensorCoreGemm.cuh" // for w1a2 CONV
 #include "66_bmmaTensorCoreGemm.cuh" // for w1a2 GEMM
 #endif
 
 #ifdef w2a2
+#define w_bit 2
+#define a_bit 2
 #include "69_bmmaTensorCoreGemm.cuh" // for w2a2 CONV
 #include "73_bmmaTensorCoreGemm.cuh" // for w1a1 GEMM
 #endif
 
 #ifdef w2a8
+#define w_bit 2
+#define a_bit 8
 #include "74_bmmaTensorCoreGemm.cuh" // for w2a2 CONV
 #include "76_bmmaTensorCoreGemm.cuh" // for w1a1 GEMM
 #endif
-
 
 #define max_v 10
 #define min_v -10
