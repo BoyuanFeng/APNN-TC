@@ -61,7 +61,7 @@ __global__ void alexnet128(
 //     Out128Layer(bout);
     Output_new(bout);
 }
-// #endif
+
 
 int main()
 {
@@ -75,7 +75,6 @@ int main()
     const unsigned image_channel = 3;
     const unsigned n_hidden = 4096;
 
-
     //=============== Get Input and Label =================
     float* images = (float*)malloc(batch*image_height*image_width*image_channel*sizeof(float));
     unsigned* image_labels = (unsigned*)malloc(batch*sizeof(unsigned));
@@ -85,11 +84,6 @@ int main()
     FILE* config_file = fopen("./alexnet_imagenet.csv","r");
 
     //================ Set Network =================
-    //Bconv1 Layer
-    // InConv128LayerParam* bconv1 = new InConv128LayerParam("Conv1", image_height, image_width, 
-    //         11, 11, 3, 64, batch, 4, 4, true, 2, 2); 
-    // InConv128LayerParam* bconv1_gpu = bconv1->initialize(images, config_file);
-
     // Bconv1 Layer
     uin32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
     Conv128LayerParam* bconv1 = new Conv128LayerParam("Conv1", image_height, image_width, 
@@ -133,25 +127,44 @@ int main()
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc2->get_output_gpu());  
 
     //================ Setup Kernel =================
-    int numThreads = 256;
+    int numThreads = 16;
+    int numBlocks = 3; // deviceProp.multiProcessorCount;
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, dev);
-    int numBlocksPerSm;
+//     int numBlocksPerSm;
     int shared_memory = 65536; // 64KB
-    
-    cudaFuncSetAttribute(alexnet128, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
-    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, alexnet128, numThreads, shared_memory);
 
-    void* args[] = {&bconv1_gpu, &bconv2_gpu, &bconv3_gpu, &bconv4_gpu, &bconv5_gpu, 
-        &bfc1_gpu, &bfc2_gpu, &bout_gpu};
-
-    printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
 
     std::clock_t c_start = std::clock();
     // START_TIMER;
 
-    cudaLaunchCooperativeKernel((void*)alexnet128, deviceProp.multiProcessorCount, 
-            numThreads, args, shared_memory);
+     cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+     cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+     cudaFuncSetAttribute(Output_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+
+     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
+     cudaDeviceSynchronize(); 
+
+     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv2_gpu);
+     cudaDeviceSynchronize(); 
+
+     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv3_gpu);
+     cudaDeviceSynchronize(); 
+
+     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv4_gpu);
+     cudaDeviceSynchronize(); 
+
+     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv5_gpu);
+     cudaDeviceSynchronize(); 
+
+     FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
+     cudaDeviceSynchronize(); 
+
+     FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc2_gpu);
+     cudaDeviceSynchronize(); 
+
+     Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
+     cudaDeviceSynchronize(); 
 
     // STOP_TIMER;
     cudaDeviceSynchronize(); 
@@ -159,7 +172,7 @@ int main()
 
     std::clock_t c_end = std::clock();
     float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
-    printf("\n==============\n AlexNet (ms): %.3f\n", time_elapsed_ms);
+    printf("\n==============\nAlexNet (ms): %.3f\n", time_elapsed_ms);
 
 
     if ( err != cudaSuccess ){

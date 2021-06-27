@@ -9,9 +9,9 @@
 
 #include "param.h"
 
-// #define w1a2
+#define w1a2
 // #define w2a2
-#define w2a8
+// #define w2a8
 
 #ifdef w1a2
 #define w_bit 1
@@ -302,6 +302,30 @@ void weight_quantization_fc_hidden(uin32* bit_weight_gpu, float* weight_gpu,
     // return bit_weight_gpu;
 }
 
+
+__global__ 
+void Conv_new_global(Conv128LayerParam* p){
+    // compute_gemm_imma((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, \
+    // STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width)); 
+    // __global__ void APConv_w1a2_pack(const int4 *W, const int4 *X, int *Output, int Height, int Width, int CIN, int COUT) 
+    
+    #ifdef w1a2
+    APConv_w1a2_pack((const int4*) p->filter_gpu, (const int4*) p->input_gpu, (int*) p->output_gpu, \
+                    PAD8(p->batch)*p->input_height, p->input_width, p->input_channels, p->output_channels); 
+    #endif
+
+    #ifdef w2a2
+    APConv_w2a2_pack_pool((const int4*) p->filter_gpu, (const int4*) p->input_gpu, (int*) p->output_gpu, \
+    PAD8(p->batch)*(p->input_height), p->input_width, p->input_channels, p->output_channels);
+    #endif
+
+    #ifdef w2a8
+    APConv_w2a8_pack((const int4*) p->filter_gpu, (const int4*) p->input_gpu, (int*) p->output_gpu, \
+    PAD8(p->batch)*(p->input_height), p->input_width, p->input_channels, p->output_channels);
+    #endif
+}
+
+
 __device__ __inline__ 
 void Conv_new(Conv128LayerParam* p){
     // compute_gemm_imma((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, \
@@ -344,6 +368,28 @@ void Output_new(Out128LayerParam* p){
     #endif
 }
 
+
+__global__ 
+void Output_new_global(Out128LayerParam* p){
+    #ifdef w1a2
+    // compute_gemm_imma((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, \
+    //                     STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width)); 
+    apmm_w1a2_decompose((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
+                        8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 1, 2);
+    #endif
+
+    #ifdef w2a2
+    apmm_w2a2_decompose((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
+    8*(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 2, 2);
+    #endif
+
+    #ifdef w2a8
+    apmm_w2a8((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
+    8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 2, 8);
+    #endif
+}
+
+
 __device__ __inline__ 
 void FC_new(Fc128LayerParam* p){
 
@@ -364,6 +410,29 @@ void FC_new(Fc128LayerParam* p){
     8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 2, 8);
     #endif
 }
+
+
+__global__ 
+void FC_new_global(Fc128LayerParam* p){
+
+    #ifdef w1a2
+    // compute_gemm_imma((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, \
+    // STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width)); 
+    apmm_w1a2_decompose((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
+    8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 1, 2);
+    #endif
+
+    #ifdef w2a2
+    apmm_w2a2_decompose((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
+    8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 2, 2);
+    #endif
+
+    #ifdef w2a8
+    apmm_w2a8((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
+    8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 2, 8);
+    #endif
+}
+
 
 __device__ __inline__ void In128Layer(In128LayerParam* p)
 {
