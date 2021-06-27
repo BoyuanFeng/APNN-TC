@@ -3,90 +3,16 @@
 #include <sys/time.h>
 #include <iostream>
 #include <string>
-#include <cooperative_groups.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
+
 #include "utility.h"
 #include "param.h"
 #include "kernel.cuh"
 #include "data.h"
 
-using namespace cooperative_groups;
 using namespace std;
-
-__global__ void vggnet128(
-        InConv128LayerParam* bconv1, 
-        Conv128LayerParam* bconv2, 
-        Conv128LayerParam* bconv3,
-        Conv128LayerParam* bconv4, 
-        Conv128LayerParam* bconv5, 
-        Conv128LayerParam* bconv6,
-        Conv128LayerParam* bconv7, 
-        Conv128LayerParam* bconv8,
-        Conv128LayerParam* bconv9, 
-        Conv128LayerParam* bconv10, 
-        Conv128LayerParam* bconv11,
-        Conv128LayerParam* bconv12,
-        Conv128LayerParam* bconv13,
-        Fc128LayerParam* bfc1, 
-        Fc128LayerParam* bfc2, 
-        Out128LayerParam* bout)
-{
-    grid_group grid = this_grid();
-    
-    //========= Conv1 ============
-    InConv128Layer(bconv1);
-    grid.sync();
-    //========= Conv2 ============
-    // Conv128Layer(bconv2);
-    Conv_new(bconv2);
-    grid.sync();
-    //========= Conv3 ============
-    // Conv128Layer(bconv3);
-    Conv_new(bconv3);
-    grid.sync();
-    //========= Conv4 ============
-    // Conv128Layer(bconv4);
-    Conv_new(bconv4);
-    grid.sync();
-    //========= Conv5 ============
-    // Conv128Layer(bconv5);
-    Conv_new(bconv5);
-    grid.sync();
-    //========= Conv6 ============
-    // Conv128Layer(bconv6);
-    Conv_new(bconv6);
-    grid.sync();
-    //========= Conv7 ============
-    // Conv128Layer(bconv7);
-    Conv_new(bconv7);
-    grid.sync();
-    //========= Conv8 ============
-    // Conv128Layer(bconv8);
-    Conv_new(bconv8);
-    grid.sync();
-    //========= Conv9 ============
-    // Conv128Layer(bconv9);
-    Conv_new(bconv9);
-    grid.sync();
-    //========= Conv10 ============
-    // Conv128Layer(bconv10);
-    Conv_new(bconv10);
-    grid.sync();
-    //========= Fc1 ============
-//     Fc128Layer(bfc1);
-    FC_new(bfc1);
-    grid.sync();
-    //========= Fc2 ============
-//     Fc128Layer(bfc2);
-    FC_new(bfc2);
-    grid.sync();
-    ////========== Output ===========
-    // Out128Layer(bout);
-    Output_new(bout);
-}
-  
      
 int main()
 {
@@ -186,25 +112,6 @@ int main()
             false, false, 0, false, a_bit, w_bit
         );
     Conv128LayerParam* bconv10_gpu = bconv10->initialize(config_file, bconv9->get_output_gpu());
-    //Bconv11 Layer
-    // Conv128LayerParam* bconv11 = new Conv128LayerParam("Conv11", bconv10->output_height, 
-    //         bconv10->output_width, filter_height, filter_width, 512, 512, batch,
-    //         1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
-    //     );
-    // Conv128LayerParam* bconv11_gpu = bconv11->initialize(config_file, bconv10->get_output_gpu());
-    // //Bconv12 Layer
-    // Conv128LayerParam* bconv12 = new Conv128LayerParam("Conv12", bconv11->output_height, 
-    //         bconv11->output_width, filter_height, filter_width, 512, 512, batch,
-    //         1, 1, true, 1, 1, false, false, false, 0, false, a_bit, w_bit
-    //     );
-    // Conv128LayerParam* bconv12_gpu = bconv12->initialize(config_file, bconv11->get_output_gpu());
-    // //Bconv13 Layer
-    // Conv128LayerParam* bconv13 = new Conv128LayerParam("Conv13", bconv12->output_height, 
-    //         bconv12->output_width, filter_height, filter_width, 512, 512, batch, 1, 1,
-    //         true, 2, 2, true,
-    //         false, false, 0, false, a_bit, w_bit
-    //     );
-    // Conv128LayerParam* bconv13_gpu = bconv13->initialize(config_file, bconv12->get_output_gpu());
     
     //Fc1 Layer
     Fc128LayerParam* bfc1 = new Fc128LayerParam("Fc1", batch, (bconv10->output_height)
@@ -218,27 +125,48 @@ int main()
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc2->get_output_gpu());  
 
     //================ Setup Kernel =================
-    int numThreads = 256;
-    cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, dev);
-    int numBlocksPerSm;
-    int shared_memory= 84*1e3; //84 KB
+    int numThreads = 512;
+    int numBlocks = 16;
+    int shared_memory = 65536; // 64KB
 
-    cudaFuncSetAttribute(vggnet128, cudaFuncAttributeMaxDynamicSharedMemorySize,shared_memory);
-    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, vggnet128, numThreads, shared_memory);
+    cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+    cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+    cudaFuncSetAttribute(Output_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
 
-    void* args[] = {&bconv1_gpu, &bconv2_gpu, &bconv3_gpu, &bconv4_gpu, &bconv5_gpu, &bconv6_gpu,
-        &bconv7_gpu, &bconv8_gpu, &bconv9_gpu, &bconv10_gpu, &bfc1_gpu, &bfc2_gpu, &bout_gpu};
+    std::clock_t c_start = std::clock();
 
-    // shared_memory = 84 * 1e3; // 96KB
-    printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
-    START_TIMER;
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv3_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv4_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv5_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv6_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv7_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv8_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv9_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv10_gpu);
+    cudaDeviceSynchronize(); 
+    FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
+    cudaDeviceSynchronize(); 
+    FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc2_gpu);
+    cudaDeviceSynchronize(); 
+    Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
+    cudaDeviceSynchronize(); 
 
-    cudaLaunchCooperativeKernel((void*)vggnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 
-            numThreads, args, shared_memory);
+    cudaError_t err = cudaGetLastError();
 
-    STOP_TIMER;
-    printf("VGG_b%d (ms): %.3f\n", batch, milliseconds);
+    std::clock_t c_end = std::clock();
+    float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+    printf("\n==============\nVGG (ms): %.3f\n", time_elapsed_ms);
 
     delete bconv1;
     delete bconv2;

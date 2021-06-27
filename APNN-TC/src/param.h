@@ -228,6 +228,7 @@ class Fc128LayerParam
             bn(NULL), bn_gpu(NULL), output(NULL), output_gpu(NULL),
             input(NULL), input_gpu(NULL), gpu(NULL), _a_bit(a_bit), _w_bit(w_bit)
         {
+            printf("%s, %d, %d\n", name, input_width, weight_width);
             strncpy(this->name, name, 8);
         }
         //row major
@@ -395,6 +396,7 @@ class Out128LayerParam
             input(NULL), input_gpu(NULL), output(NULL), output_gpu(NULL),
             weight(NULL), weight_gpu(NULL), _a_bit(a_bit), _w_bit(w_bit)
         {
+            printf("%s, %d, %d\n", name, input_width, weight_width);
             strncpy(this->name, name, 8);
         }
         // row major

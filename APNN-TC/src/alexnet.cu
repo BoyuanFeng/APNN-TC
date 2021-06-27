@@ -4,7 +4,6 @@
 #include <ctime>
 #include <iostream>
 #include <string>
-#include <cooperative_groups.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -14,54 +13,7 @@
 #include "kernel.cuh"
 #include "data.h"
 
-using namespace cooperative_groups;
 using namespace std;
-
-__global__ void alexnet128(
-        // InConv128LayerParam* bconv1, 
-        Conv128LayerParam* bconv1, 
-        Conv128LayerParam* bconv2, 
-        Conv128LayerParam* bconv3,
-        Conv128LayerParam* bconv4, 
-        Conv128LayerParam* bconv5, 
-        Fc128LayerParam* bfc1, 
-        Fc128LayerParam* bfc2, 
-        Out128LayerParam* bout)
-{
-    grid_group grid = this_grid();
-    //========= Conv1 ============
-    // InConv128Layer(bconv1);
-    Conv_new(bconv1);
-    grid.sync();
-    //========= Conv2 ============
-    // Conv128Layer(bconv2);
-    Conv_new(bconv2);
-    grid.sync();
-    //========= Conv3 ============
-    // Conv128Layer(bconv3);
-    Conv_new(bconv3);
-    grid.sync();
-    //========= Conv4 ============
-    // Conv128Layer(bconv4);
-    Conv_new(bconv4);
-    grid.sync();
-    //========= Conv5 ============
-    // Conv128Layer(bconv5);
-    Conv_new(bconv5);
-    grid.sync();
-    //========= Fc1 ============
-//     Fc128Layer(bfc1);
-    FC_new(bfc1);
-    grid.sync();
-    //========= Fc2 ============
-//     Fc128Layer(bfc2);
-    FC_new(bfc2);
-    grid.sync();
-    //========== Output ===========
-//     Out128Layer(bout);
-    Output_new(bout);
-}
-
 
 int main()
 {
@@ -127,47 +79,35 @@ int main()
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc2->get_output_gpu());  
 
     //================ Setup Kernel =================
-    int numThreads = 16;
-    int numBlocks = 3; // deviceProp.multiProcessorCount;
+    int numThreads = 512;
+    int numBlocks = 8; // deviceProp.multiProcessorCount;
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, dev);
-//     int numBlocksPerSm;
     int shared_memory = 65536; // 64KB
 
-
     std::clock_t c_start = std::clock();
-    // START_TIMER;
 
-     cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
-     cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
-     cudaFuncSetAttribute(Output_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+    cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+    cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+    cudaFuncSetAttribute(Output_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
 
-     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
-     cudaDeviceSynchronize(); 
-
-     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv2_gpu);
-     cudaDeviceSynchronize(); 
-
-     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv3_gpu);
-     cudaDeviceSynchronize(); 
-
-     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv4_gpu);
-     cudaDeviceSynchronize(); 
-
-     Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv5_gpu);
-     cudaDeviceSynchronize(); 
-
-     FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
-     cudaDeviceSynchronize(); 
-
-     FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc2_gpu);
-     cudaDeviceSynchronize(); 
-
-     Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
-     cudaDeviceSynchronize(); 
-
-    // STOP_TIMER;
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
     cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv3_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv4_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv5_gpu);
+    cudaDeviceSynchronize(); 
+    FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
+    cudaDeviceSynchronize(); 
+    FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc2_gpu);
+    cudaDeviceSynchronize(); 
+    Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
+    cudaDeviceSynchronize(); 
+
     cudaError_t err = cudaGetLastError();
 
     std::clock_t c_end = std::clock();
