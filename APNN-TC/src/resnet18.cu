@@ -14,97 +14,6 @@
 
 using namespace std;
 
-// __global__ void resnet128(
-//         InConv128LayerParam* bconv1, 
-//         Conv128LayerParam* l1b1c1, 
-//         Conv128LayerParam* l1b1c2,
-//         Conv128LayerParam* l1b2c1, 
-//         Conv128LayerParam* l1b2c2,
-//         Conv128LayerParam* l2b1c1, 
-//         Conv128LayerParam* l2b1c2,
-//         Conv128LayerParam* l2b2c1, 
-//         Conv128LayerParam* l2b2c2,
-//         Conv128LayerParam* l3b1c1, 
-//         Conv128LayerParam* l3b1c2,
-//         Conv128LayerParam* l3b2c1, 
-//         Conv128LayerParam* l3b2c2,
-//         Conv128LayerParam* l4b1c1, 
-//         Conv128LayerParam* l4b1c2,
-//         Conv128LayerParam* l4b2c1, 
-//         Conv128LayerParam* l4b2c2,
-//         Fc128LayerParam* bfc1, 
-//         Out128LayerParam* bout)
-// {
-//     grid_group grid = this_grid();
-//     //========= Conv1 ============
-//     InConv128Layer(bconv1);
-//     grid.sync();
-//     //========= L1B1 ============
-// //     Conv128Layer(l1b1c1);
-//     Conv_new(l1b1c1);
-//     grid.sync();
-// //     Conv128Layer(l1b1c2);
-//     Conv_new(l1b1c2);
-//     grid.sync();
-//     //========= L1B2 ============
-// //     Conv128Layer(l1b2c1);
-//     Conv_new(l1b2c1);
-//     grid.sync();
-// //     Conv128Layer(l1b2c2);
-//     Conv_new(l1b2c2);
-//     grid.sync();
-//     //========= L2B1 ============
-// //     Conv128Layer(l2b1c1);
-//     Conv_new(l2b1c1);
-//     grid.sync();
-// //     Conv128Layer(l2b1c2);
-//     Conv_new(l2b1c2);
-//     grid.sync();
-//     //========= L2B2 ============
-// //     Conv128Layer(l2b2c1);
-//     Conv_new(l2b2c1);
-//     grid.sync();
-// //     Conv128Layer(l2b2c2);
-//     Conv_new(l2b2c2);
-//     grid.sync();
-//     //========= L3B1 ============
-// //     Conv128Layer(l3b1c1);
-//     Conv_new(l3b1c1);
-//     grid.sync();
-// //     Conv128Layer(l3b1c2);
-//     Conv_new(l3b1c2);
-//     grid.sync();
-
-//     //========= L3B2 ============
-// //     Conv128Layer(l3b2c1);
-//     Conv_new(l3b2c1);
-//     grid.sync();
-// //     Conv128Layer(l3b2c2);
-//     Conv_new(l3b2c2);
-//     grid.sync();
-//     //========= L4B1 ============
-// //     Conv128Layer(l4b1c1);
-//     Conv_new(l4b1c1);
-//     grid.sync();
-// //     Conv128Layer(l4b1c2);
-//     Conv_new(l4b1c2);
-//     grid.sync();
-// //     ========= L4B2 ============
-// //     Conv128Layer(l4b2c1);
-//     Conv_new(l4b2c1);
-//     grid.sync();
-// //     Conv128Layer(l4b2c2);
-//     Conv_new(l4b2c2);
-//     grid.sync();
-//     //========= Fc1 ============
-// //     Fc128Layer(bfc1);
-//     FC_new(bfc1);
-//     grid.sync();
-//     //========== Output ===========
-// //     Out128Layer(bout); //** failed with illegal memory access... check here with memory size
-//     Output_new(bout);
-// }
-
 int main()
 {
     int dev = 0;
@@ -119,7 +28,6 @@ int main()
     //=============== Get Input and Label =================
     float* images = (float*)malloc(batch*image_height*image_width*image_channel*sizeof(float));
     unsigned* image_labels = (unsigned*)malloc(batch*sizeof(unsigned));
-//     read_ImageNet_normalized("./imagenet_files.txt", images, image_labels, batch);
     uin32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
 
     //================ Get Weight =================
@@ -233,8 +141,8 @@ int main()
 
     //================ Setup Kernel =================
     int numThreads = 512;
-    int numBlocks = 16;
-    int shared_memory = 65536; // 64KB
+    int numBlocks = 10;
+    int shared_memory = 64*1e3; // 64KB
 
     cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
     cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
@@ -285,8 +193,6 @@ int main()
     std::clock_t c_end = std::clock();
     float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
     printf("\n==============\nResNet (ms): %.3f\n", time_elapsed_ms);
-
-
 
     delete bconv1;
     delete l1b1c1;
