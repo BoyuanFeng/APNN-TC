@@ -948,8 +948,8 @@ class Conv128LayerParam
         {
             CHECK_NULL_POINTER(input_gpu);
             CHECK_NULL_POINTER(output_gpu);
-            if (save_residual) CHECK_NULL_POINTER(output_residual_gpu);
-            if (inject_residual) CHECK_NULL_POINTER(input_residual_gpu);
+            // if (save_residual) CHECK_NULL_POINTER(output_residual_gpu);
+            // if (inject_residual) CHECK_NULL_POINTER(input_residual_gpu);
             SAFE_ALOC_GPU(this->gpu, sizeof(Conv128LayerParam));
             CUDA_SAFE_CALL( cudaMemcpy(this->gpu, this, 
                         sizeof(Conv128LayerParam), cudaMemcpyHostToDevice) );

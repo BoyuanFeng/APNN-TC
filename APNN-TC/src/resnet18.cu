@@ -3,108 +3,107 @@
 #include <sys/time.h>
 #include <iostream>
 #include <string>
-#include <cooperative_groups.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
+
 #include "utility.h"
 #include "param.h"
 #include "kernel.cuh"
 #include "data.h"
 
-using namespace cooperative_groups;
 using namespace std;
 
-__global__ void resnet128(
-        InConv128LayerParam* bconv1, 
-        Conv128LayerParam* l1b1c1, 
-        Conv128LayerParam* l1b1c2,
-        Conv128LayerParam* l1b2c1, 
-        Conv128LayerParam* l1b2c2,
-        Conv128LayerParam* l2b1c1, 
-        Conv128LayerParam* l2b1c2,
-        Conv128LayerParam* l2b2c1, 
-        Conv128LayerParam* l2b2c2,
-        Conv128LayerParam* l3b1c1, 
-        Conv128LayerParam* l3b1c2,
-        Conv128LayerParam* l3b2c1, 
-        Conv128LayerParam* l3b2c2,
-        Conv128LayerParam* l4b1c1, 
-        Conv128LayerParam* l4b1c2,
-        Conv128LayerParam* l4b2c1, 
-        Conv128LayerParam* l4b2c2,
-        Fc128LayerParam* bfc1, 
-        Out128LayerParam* bout)
-{
-    grid_group grid = this_grid();
-    //========= Conv1 ============
-    InConv128Layer(bconv1);
-    grid.sync();
-    //========= L1B1 ============
-//     Conv128Layer(l1b1c1);
-    Conv_new(l1b1c1);
-    grid.sync();
-//     Conv128Layer(l1b1c2);
-    Conv_new(l1b1c2);
-    grid.sync();
-    //========= L1B2 ============
-//     Conv128Layer(l1b2c1);
-    Conv_new(l1b2c1);
-    grid.sync();
-//     Conv128Layer(l1b2c2);
-    Conv_new(l1b2c2);
-    grid.sync();
-    //========= L2B1 ============
-//     Conv128Layer(l2b1c1);
-    Conv_new(l2b1c1);
-    grid.sync();
-//     Conv128Layer(l2b1c2);
-    Conv_new(l2b1c2);
-    grid.sync();
-    //========= L2B2 ============
-//     Conv128Layer(l2b2c1);
-    Conv_new(l2b2c1);
-    grid.sync();
-//     Conv128Layer(l2b2c2);
-    Conv_new(l2b2c2);
-    grid.sync();
-    //========= L3B1 ============
-//     Conv128Layer(l3b1c1);
-    Conv_new(l3b1c1);
-    grid.sync();
-//     Conv128Layer(l3b1c2);
-    Conv_new(l3b1c2);
-    grid.sync();
+// __global__ void resnet128(
+//         InConv128LayerParam* bconv1, 
+//         Conv128LayerParam* l1b1c1, 
+//         Conv128LayerParam* l1b1c2,
+//         Conv128LayerParam* l1b2c1, 
+//         Conv128LayerParam* l1b2c2,
+//         Conv128LayerParam* l2b1c1, 
+//         Conv128LayerParam* l2b1c2,
+//         Conv128LayerParam* l2b2c1, 
+//         Conv128LayerParam* l2b2c2,
+//         Conv128LayerParam* l3b1c1, 
+//         Conv128LayerParam* l3b1c2,
+//         Conv128LayerParam* l3b2c1, 
+//         Conv128LayerParam* l3b2c2,
+//         Conv128LayerParam* l4b1c1, 
+//         Conv128LayerParam* l4b1c2,
+//         Conv128LayerParam* l4b2c1, 
+//         Conv128LayerParam* l4b2c2,
+//         Fc128LayerParam* bfc1, 
+//         Out128LayerParam* bout)
+// {
+//     grid_group grid = this_grid();
+//     //========= Conv1 ============
+//     InConv128Layer(bconv1);
+//     grid.sync();
+//     //========= L1B1 ============
+// //     Conv128Layer(l1b1c1);
+//     Conv_new(l1b1c1);
+//     grid.sync();
+// //     Conv128Layer(l1b1c2);
+//     Conv_new(l1b1c2);
+//     grid.sync();
+//     //========= L1B2 ============
+// //     Conv128Layer(l1b2c1);
+//     Conv_new(l1b2c1);
+//     grid.sync();
+// //     Conv128Layer(l1b2c2);
+//     Conv_new(l1b2c2);
+//     grid.sync();
+//     //========= L2B1 ============
+// //     Conv128Layer(l2b1c1);
+//     Conv_new(l2b1c1);
+//     grid.sync();
+// //     Conv128Layer(l2b1c2);
+//     Conv_new(l2b1c2);
+//     grid.sync();
+//     //========= L2B2 ============
+// //     Conv128Layer(l2b2c1);
+//     Conv_new(l2b2c1);
+//     grid.sync();
+// //     Conv128Layer(l2b2c2);
+//     Conv_new(l2b2c2);
+//     grid.sync();
+//     //========= L3B1 ============
+// //     Conv128Layer(l3b1c1);
+//     Conv_new(l3b1c1);
+//     grid.sync();
+// //     Conv128Layer(l3b1c2);
+//     Conv_new(l3b1c2);
+//     grid.sync();
 
-    //========= L3B2 ============
-//     Conv128Layer(l3b2c1);
-    Conv_new(l3b2c1);
-    grid.sync();
-//     Conv128Layer(l3b2c2);
-    Conv_new(l3b2c2);
-    grid.sync();
-    //========= L4B1 ============
-//     Conv128Layer(l4b1c1);
-    Conv_new(l4b1c1);
-    grid.sync();
-//     Conv128Layer(l4b1c2);
-    Conv_new(l4b1c2);
-    grid.sync();
-//     ========= L4B2 ============
-//     Conv128Layer(l4b2c1);
-    Conv_new(l4b2c1);
-    grid.sync();
-//     Conv128Layer(l4b2c2);
-    Conv_new(l4b2c2);
-    grid.sync();
-    //========= Fc1 ============
-//     Fc128Layer(bfc1);
-    FC_new(bfc1);
-    grid.sync();
-    //========== Output ===========
-//     Out128Layer(bout); //** failed with illegal memory access... check here with memory size
-    Output_new(bout);
-}
+//     //========= L3B2 ============
+// //     Conv128Layer(l3b2c1);
+//     Conv_new(l3b2c1);
+//     grid.sync();
+// //     Conv128Layer(l3b2c2);
+//     Conv_new(l3b2c2);
+//     grid.sync();
+//     //========= L4B1 ============
+// //     Conv128Layer(l4b1c1);
+//     Conv_new(l4b1c1);
+//     grid.sync();
+// //     Conv128Layer(l4b1c2);
+//     Conv_new(l4b1c2);
+//     grid.sync();
+// //     ========= L4B2 ============
+// //     Conv128Layer(l4b2c1);
+//     Conv_new(l4b2c1);
+//     grid.sync();
+// //     Conv128Layer(l4b2c2);
+//     Conv_new(l4b2c2);
+//     grid.sync();
+//     //========= Fc1 ============
+// //     Fc128Layer(bfc1);
+//     FC_new(bfc1);
+//     grid.sync();
+//     //========== Output ===========
+// //     Out128Layer(bout); //** failed with illegal memory access... check here with memory size
+//     Output_new(bout);
+// }
 
 int main()
 {
@@ -121,15 +120,16 @@ int main()
     float* images = (float*)malloc(batch*image_height*image_width*image_channel*sizeof(float));
     unsigned* image_labels = (unsigned*)malloc(batch*sizeof(unsigned));
 //     read_ImageNet_normalized("./imagenet_files.txt", images, image_labels, batch);
+    uin32* lowBit_image_gpu = images_quantization(images, batch, image_height, image_width, image_channel);
 
     //================ Get Weight =================
     FILE* config_file = fopen("./resnet_imagenet.csv","r");
 
     //================ Set Network =================
     //Layer-0
-    InConv128LayerParam* bconv1 = new InConv128LayerParam("Conv1", image_height, image_width, 
-            7, 7, 3, 64, batch,4,4,true,1,1,true);//save residual 
-    InConv128LayerParam* bconv1_gpu = bconv1->initialize(images, config_file);
+    Conv128LayerParam* bconv1 = new Conv128LayerParam("Conv1", image_height, image_width, 
+            7, 7, 3, 64, batch,4,4,true,1,1,true); //save residual 
+    Conv128LayerParam* bconv1_gpu = bconv1->initialize(config_file, lowBit_image_gpu);
 
     //Layer-1, basic-block-1, conv1
     Conv128LayerParam* l1b1c1 = new Conv128LayerParam("L1B1C1", bconv1->output_height, 
@@ -232,60 +232,61 @@ int main()
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc1->get_output_gpu());  
 
     //================ Setup Kernel =================
-    int numThreads = 128;
-    cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, dev);
-    int numBlocksPerSm;
-    int shared_memory = 96 * 1e3;//512*sizeof(int)*32;
-    cudaFuncSetAttribute(resnet128, cudaFuncAttributeMaxDynamicSharedMemorySize,shared_memory);
-    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&numBlocksPerSm, resnet128, numThreads, shared_memory);
-    //cudaFuncSetAttribute(resnet128, cudaFuncAttributePreferredSharedMemoryCarveout,0);
+    int numThreads = 512;
+    int numBlocks = 16;
+    int shared_memory = 65536; // 64KB
 
-    void* args[] = {&bconv1_gpu, 
-        &l1b1c1_gpu, 
-        &l1b1c2_gpu,
-        &l1b2c1_gpu,
-        &l1b2c2_gpu,
-        &l2b1c1_gpu, 
-        &l2b1c2_gpu,
-        &l2b2c1_gpu,
-        &l2b2c2_gpu,
-        &l3b1c1_gpu, 
-        &l3b1c2_gpu,
-        &l3b2c1_gpu,
-        &l3b2c2_gpu,
-        &l4b1c1_gpu, 
-        &l4b1c2_gpu,
-        &l4b2c1_gpu,
-        &l4b2c2_gpu,
-        &bfc1_gpu,
-        &bout_gpu};
+    cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+    cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
+    cudaFuncSetAttribute(Output_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
 
-    printf("numBlocks: %d, shared_memory (KB): %.3f\n", numBlocksPerSm, 1.0f*shared_memory/1e3);
-    START_TIMER;
+    std::clock_t c_start = std::clock();
 
-    cudaLaunchCooperativeKernel((void*)resnet128, numBlocksPerSm*deviceProp.multiProcessorCount, 
-            numThreads, args, shared_memory);
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l1b1c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l1b1c2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l1b2c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l1b2c2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l2b1c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l2b1c2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l2b2c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l2b2c2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l3b1c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l3b1c2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l3b2c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l3b2c2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l4b1c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l4b1c2_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l4b2c1_gpu);
+    cudaDeviceSynchronize(); 
+    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(l4b2c2_gpu);
+    cudaDeviceSynchronize(); 
+    FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
+    cudaDeviceSynchronize(); 
+    Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
+    cudaDeviceSynchronize(); 
+    cudaError_t err = cudaGetLastError();
 
-    STOP_TIMER;
-    printf("ResNet_b%d (ms): %.3f\n", batch, milliseconds);
-
-    //================ Output =================
-//     float* output = bout->download_output();
-    //validate_prediction(output, image_labels, output_size, batch);
+    std::clock_t c_end = std::clock();
+    float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
+    printf("\n==============\nResNet (ms): %.3f\n", time_elapsed_ms);
 
 
-/*
-    float* out = l1b2c1->download_full_output();
-    //float* out = l1b1c2->download_full_output();
-    //for (int i=0; i<512; i++)
-    for (int i=4096; i<4096+512; i++)
-    {
-        printf("%.f ", out[i]);
-        if ((i+1)%32==0) printf("\n");
-    }
-    printf("\n===%f===\n", bout->bn_scale[0]);
-*/ 
 
     delete bconv1;
     delete l1b1c1;
