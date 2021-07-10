@@ -49,8 +49,8 @@ launch.sh
 ```
 or pull docker image from docker hub and launch.
 ```
-docker pull 
-docker run -it --rm --gpus all -v $(PWD):/apnn-tc apnn-tc:latest /bin/bash
+docker pull happy233/apnn-tc:main
+docker run -it --rm --gpus all -v $(PWD):/apnn-tc happy233/apnn-tc:main /bin/bash
 ```
 
 # Experiments
