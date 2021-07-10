@@ -20,9 +20,11 @@ git submodule update
 + `cuDNN == 8.2`
 
 ## Files & Directory
-+ `cutlass_baselines/`: CUTLASS baselines NN models, including FP21, FP16, and INT8.
-+ `cutlass/`: CUTLASS header and source files.
++ `APNN-TC-kernel/`: our APNN-TC GEMM and CONV kernels with different bit combinations.
 + `APNN-TC/`: our APNN-TC NN low-bit model (AlextNet, VGG-variant, ResNet18) with `w1a2` for demonstration.
++ `cutlass/`: CUTLASS header and source files.
++ `cutlass_baselines/`: CUTLASS baselines NN models, including FP21, FP16, and INT8.
+
 
 ## Setup Environment.
 + Install NVIDIA Docker.
@@ -52,17 +54,10 @@ docker run -it --rm --gpus all -v $(PWD):/apnn-tc apnn-tc:latest /bin/bash
 ```
 
 # Experiments
-## APNN-TC -- GEMM  kernel
-+ `gemm-w1a2`: 
-+ `gemm-w1a3`: 
-+ `gemm-w1a4`:
-+ `gemm-w2a2`: 
-
-## APNN-TC -- CONV kernel  
-+ `conv-w1a2`:
-+ `conv-w1a3`:
-+ `conv-w1a4`:
-+ `conv-w2a2`:
+## APNN-TC -- GEMM and CONV kernel
++ `cd APNN-TC-kernel && make`
++ Run `./gemm-w1a2`, `./gemm-w1a3`,`./gemm-w1a4`,`./gemm-w2a2`.
++ Run `./conv-w1a2`, `./conv-w1a3`, `./conv-w1a4`, `./conv-w2a2`.
 
 ## CUTLASS -- GEMM kernel
 + `cd bench_cutlass/`
