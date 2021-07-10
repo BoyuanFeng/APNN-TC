@@ -3,7 +3,12 @@
 
 ## Clone this project.
 ```
-git clone git@github.com:YukeWang96/APNN_TC_sc21.git
+git clone --recursive git@github.com:YukeWang96/APNN_TC_sc21.git
+```
+in case of missing `--recursive` during the clone
+```
+git submodule init
+git submodule update
 ```
 
 ## OS & Compiler:
@@ -12,21 +17,80 @@ git clone git@github.com:YukeWang96/APNN_TC_sc21.git
 + `make >= 4.2.1`
 + `CUDA >= 11.0`
 + `libjpeg`
++ `cuDNN == 8.2`
 
 ## Files & Directory
 + `cutlass_baselines/`: CUTLASS baselines NN models, including FP21, FP16, and INT8.
 + `cutlass/`: CUTLASS header and source files.
-+ `APNN-TC/`: our APNN-TC NN low-bit design with `w1a2` for demonstration.
++ `APNN-TC/`: our APNN-TC NN low-bit model (AlextNet, VGG-variant, ResNet18) with `w1a2` for demonstration.
 
-## Compile
-+ Build and run CUTLASS baseline.
+## Setup Environment.
++ Install NVIDIA Docker.
 ```
-cd cutlass_baselines
-make
+curl https://get.docker.com | sh \
+  && sudo systemctl --now enable docker
+
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+   && curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add - \
+   && curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-docker2
+sudo systemctl restart docker
 ```
 
++ Build and Launch Docker.
+```
+cd Docker/
+build.sh
+launch.sh
+```
+or pull docker image from docker hub and launch.
+```
+docker pull 
+docker run -it --rm --gpus all -v $(PWD):/apnn-tc apnn-tc:latest /bin/bash
+```
+
+# Experiments
+## APNN-TC -- GEMM  kernel
++ `gemm-w1a2`: 
++ `gemm-w1a3`: 
++ `gemm-w1a4`:
++ `gemm-w2a2`: 
+
+## APNN-TC -- CONV kernel  
++ `conv-w1a2`:
++ `conv-w1a3`:
++ `conv-w1a4`:
++ `conv-w2a2`:
+
+## CUTLASS -- GEMM kernel
++ `cd bench_cutlass/`
++ `make all`
++ `./run-gemm.py`
+
+## CUTLASS -- CONV kernel
++ `cd bench_cutlass/`
++ `make all`
++ `./run-conv.py`
+
+## APNN-TC -- NN model  
 + Build and run the network with `w1a2` APNN (Table-2). 
-> +  `cd APNN-TC && make`
-> + `./alexnet` to run alexnet with `w1a2`.
-> + `./vgg` to run VGG-variant in `w1a2`.
-> + `./resnet18` to run ResNet18 in `w1a2`.
++ `cd APNN-TC && make`
++ `./alexnet` to run alexnet with `w1a2`.
++ `./vgg` to run VGG-variant in `w1a2`. 
++ `./resnet18` to run ResNet18 in `w1a2`.
+
+## CUTLASS -- NN model  
++ Build and run CUTLASS baseline.
++ Run `cd cutlass_baselines && make`
++  Select the precision (FP32, FP16, INT8) of CUTLASS, `cd cutlass_baselines/src/config.h` and comment out other two unused bitwidth.
+```
+#define BIT_WIDTH 32
+// #define BIT_WIDTH 16
+// #define BIT_WIDTH 8
+```
+
++ Run `./alexnet` to run AlexNet in (FP32, FP16, INT8).
++ Run `./vgg_variant` to run VGG-variant in (FP32, FP16, INT8).
++ Run `./resnet18` to run ResNet18 in (FP32, FP16, INT8).

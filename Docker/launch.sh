@@ -1,2 +1,2 @@
 
-docker run -it --rm --gpus all -v $PWD/../:/cutlass apnn-tc:latest /bin/bash
+docker run -it --rm --gpus all -v $PWD/../:/apnn-tc apnn-tc:latest /bin/bash

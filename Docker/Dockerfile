@@ -3,8 +3,10 @@ FROM nvidia/cuda:11.2.2-cudnn8-devel-ubuntu18.04
 
 ENV CUDACXX=/usr/local/cuda-11.2/bin/nvcc
 RUN apt-get update
-RUN apt-get install -y wget libssl-dev\
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y  wget \
+                        libssl-dev \
+                        libjpeg-dev 
+RUN rm -rf /var/lib/apt/lists/*
 
 ENV version=3.20
 ENV build=0
@@ -25,4 +27,4 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y git
 
-WORKDIR /cutlass 
+WORKDIR /apnn-tc
