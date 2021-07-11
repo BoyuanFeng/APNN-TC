@@ -19,5 +19,4 @@ bench_conv: bench_conv.cu
 # 	nvcc $(FLAG) $< -o $@ -lcublas
 
 clean:
-	rm -r bench_gemm \
-			bench_conv 
+	rm -r bench_gemm bench_conv 

@@ -1,0 +1,9 @@
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+simpleBMMA_CUDA
+cubin
+bin/*
