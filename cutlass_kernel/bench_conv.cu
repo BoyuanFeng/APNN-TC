@@ -137,8 +137,8 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 
 // #define BIT_WIDTH 16
 // #define BIT_WIDTH 8
-// #define BIT_WIDTH 4
-#define BIT_WIDTH 1
+#define BIT_WIDTH 4
+// #define BIT_WIDTH 1
 
 #if BIT_WIDTH == 32
 using ElementInputA           = float;
@@ -526,7 +526,7 @@ struct Options {
     int64_t fmas = output_size().product() * int64_t(filter_size.h() * filter_size.w() * filter_size.c());
     
     // Two flops per multiply-add
-    return 2.0 * double(fmas) / double(1.0e9) / runtime_s;
+    return 2.0 * double(fmas) / double(1.0e9) / runtime_s/1e3;
   }
 };
 
@@ -552,7 +552,7 @@ struct Result {
       out << "Name,";
     }
 
-    out << "Precision,Layer,N,H,W,C,K,R,S,Runtime,GFLOPs";
+    out << "Precision,Layer,N,H,W,C,K,R,S,Runtime,TFLOPs";
 
     return out;
   }
