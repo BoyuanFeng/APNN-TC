@@ -23,7 +23,8 @@ git submodule update
 + `APNN-TC-kernel/`: our APNN-TC GEMM and CONV kernels with different bit combinations.
 + `APNN-TC/`: our APNN-TC NN low-bit model (AlextNet, VGG-variant, ResNet18) with `w1a2` for demonstration.
 + `cutlass/`: CUTLASS header and source files.
-+ `cutlass_baselines/`: CUTLASS baselines NN models, including FP21, FP16, and INT8.
++ `cutlass_kernel/`: CUTLASS baselines GEMM and CONV kernels, including INT4 and INT1.
++ `cutlass_nn/`: CUTLASS baselines NN models, including FP32, FP16, and INT8.
 
 
 ## Setup Environment.
