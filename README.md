@@ -3,7 +3,7 @@
 
 ## Clone this project.
 ```
-git clone --recursive git@github.com:YukeWang96/APNN_TC_sc21.git
+git clone --recursive git@github.com:BoyuanFeng/APNN-TC.git
 ```
 in case of missing `--recursive` during the clone
 ```
