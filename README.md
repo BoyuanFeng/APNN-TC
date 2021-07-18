@@ -59,11 +59,12 @@ docker run -it --rm --gpus all -v $(PWD):/apnn-tc happy233/apnn-tc:main /bin/bas
 + Run `./gemm-w1a2`, `./gemm-w1a3`,`./gemm-w1a4`,`./gemm-w2a2`.
 + Run `./conv-w1a2`, `./conv-w1a3`, `./conv-w1a4_small`, `./conv-w1a4_large`,`./conv-w2a2_small`, `./conv-w2a2_large`
 > Note that 
+> + for GEMM kernel, we profile the GEMM shape as `[M, N, K]` as `[64, N, K]`, where `N=K=[128,256,384,...,1024]`.
+> + for CONV kernel, we profile the CONV shape with on feature map with `[H, W] = [16,16]` and the kernel size is `[O, C, K, K] = [O, C, 3, 3]`, where `O=C=[128,256,384,...,1024]`. 
 > + `conv-w1a4_small` is for `w1a4` in `IN=COUT=[128,..., 640]`, 
 > + `conv-w1a4_large` is for `w1a4` in `IN=COUT>=640`
 > + `conv-w2a2_small` is for `w2a2` in `IN=COUT=[128,..., 640]`
 > + `conv-w2a2_large` is for `w2a2` in `IN=COUT>=640`
-
 <!-- ···
 For APMM, please use the following versions. Note: M64, N=K=128, 256, ..., 1024.
 apmm-w1a2: V71. [Same]
