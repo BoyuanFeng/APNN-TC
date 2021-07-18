@@ -95,11 +95,21 @@ ap-conv-w2a8: V93. [19% faster than reported.]
 + `cd bench_cutlass/`
 + `make all`
 + `./run-gemm.py`
++  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_gemm.cu` and comment out other unused bitwidth.
+```
+#define BIT_WIDTH 1
+// #define BIT_WIDTH 4
+```
 
 ## CUTLASS -- CONV kernel
 + `cd bench_cutlass/`
 + `make all`
 + `./run-conv.py`
++  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_conv.cu` and comment out other unused bitwidth.
+```
+#define BIT_WIDTH 1
+// #define BIT_WIDTH 4
+```
 
 ## APNN-TC -- NN model  
 + Build and run the network with `w1a2` APNN (Table-2). 
@@ -111,7 +121,7 @@ ap-conv-w2a8: V93. [19% faster than reported.]
 ## CUTLASS -- NN model  
 + Build and run CUTLASS baseline.
 + Run `cd cutlass_baselines && make`
-+  Select the precision (FP32, FP16, INT8) of CUTLASS, `cd cutlass_baselines/src/config.h` and comment out other two unused bitwidth.
++  Select the precision (FP32, FP16, INT8) of CUTLASS, `cd cutlass_nn/src/config.h` and comment out other two unused bitwidth.
 ```
 #define BIT_WIDTH 32
 // #define BIT_WIDTH 16

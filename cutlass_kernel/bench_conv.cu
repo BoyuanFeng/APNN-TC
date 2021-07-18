@@ -135,10 +135,12 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 // #define batch_8
 // #define batch_512
 
-// #define BIT_WIDTH 16
+
+#define BIT_WIDTH 1
+// #define BIT_WIDTH 4
 // #define BIT_WIDTH 8
-#define BIT_WIDTH 4
-// #define BIT_WIDTH 1
+// #define BIT_WIDTH 16
+
 
 #if BIT_WIDTH == 32
 using ElementInputA           = float;
