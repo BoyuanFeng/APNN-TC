@@ -65,31 +65,6 @@ docker run -it --rm --gpus all -v $(PWD):/apnn-tc happy233/apnn-tc:main /bin/bas
 > + `conv-w1a4_large` is for `w1a4` in `IN=COUT>=640`
 > + `conv-w2a2_small` is for `w2a2` in `IN=COUT=[128,..., 640]`
 > + `conv-w2a2_large` is for `w2a2` in `IN=COUT>=640`
-<!-- ···
-For APMM, please use the following versions. Note: M64, N=K=128, 256, ..., 1024.
-apmm-w1a2: V71. [Same]
-apmm-w1a3: V87. [Speed is slightly (6.5%) slower than reported.]
-apmm-w1a4: V78. [Same]
-apmm-w2a2: V72. [Current speed is slightly faseter than reported speed.]
-apmm-w1a5: V88. [Speed is 15% lower than reported.]
-apmm-w1a8: V77. [Same]
-apmm-w2a6: V89. [Speed is 13% lower than reported.]
-apmm-w2a8: V76. [Same] -->
-
-<!-- For AP-Conv, please use the following versions. Note: H=W=16, CIN=COUT=128, 256, ..., 1024 -->
-
-<!-- ap-conv-w1a2: V51. [Speed is 16% faster than reported.] -->
-<!-- ap-conv-w1a3: V59. [For CIN=COUT=128, ..., 512, same as reported. For larger size, need to use w1a4]
-
-ap-conv-w1a4_small: V53 & V54. 
-[For CIN=COUT=128,..., 640, use V53. For larger size, use V54. Overall, current speed is 16% faster than reported.]
-
-ap-conv-w2a2: V48 & V49. [For CIN=COUT=128,..., 640, use V48. For larger size, use V49. Overall, current speed is 17% faster than reported.] -->
-<!-- ap-conv-w1a5: V91. [15% faster than reported.]
-ap-conv-w1a8: V55 & V56. [For CIN=COUT=128,256, use V55. For larger size, use V56. Overall, current speed is 38% faster than reported.]
-ap-conv-w2a6: V92. [10% slower than reported.]
-ap-conv-w2a8: V93. [19% faster than reported.]
-··· -->
 
 ## CUTLASS -- GEMM kernel
 + `cd bench_cutlass/`
