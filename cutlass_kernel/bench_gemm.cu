@@ -52,13 +52,13 @@ fp32 data by using NVIDIA Ampere architecture.
 #include "helper.h"
 #include <cutlass/numeric_types.h>
 
-#define NUM_PROFILE 200 
+#define NUM_PROFILE 1000 
 
 
-// #define BIT_WIDTH 16
+// #define BIT_WIDTH 16s
 // #define BIT_WIDTH 8
-#define BIT_WIDTH 4
-// #define BIT_WIDTH 1
+// #define BIT_WIDTH 4
+#define BIT_WIDTH 1
 
 #if BIT_WIDTH == 32
   typedef float input_t;

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import os
 
-M_N_K_list = [
+B = 64
+
+N_K_list = [
     128,
     256,
     384,
@@ -12,5 +14,5 @@ M_N_K_list = [
     1024
 ]
 
-for m in M_N_K_list:
-    os.system("./bench_gemm {} {} {}".format(64, m, m))
+for N_K in N_K_list:
+    os.system("./bench_gemm {} {} {}".format(B, N_K, N_K))
