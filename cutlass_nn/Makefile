@@ -19,16 +19,10 @@ all: alexnet.bin  \
 alexnet.bin: src/alexnet.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
-alexnet_old.bin: src/alexnet_old.cu $(DEP)
-	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
-
 vgg_variant.bin: src/vgg_variant.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
 resnet18.bin: src/resnet18.cu $(DEP)
-	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
-
-test_layer: src/test_layer.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
 clean:
