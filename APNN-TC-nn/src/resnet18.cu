@@ -139,10 +139,10 @@ int main()
     Out128LayerParam* bout = new Out128LayerParam("Fout", batch, 512, output_size);
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc1->get_output_gpu());  
 
-    //================ Setup Kernel =================
+    //================ Setup Kernel =================    
     int numThreads = 512;
-    int numBlocks = 10;
-    int shared_memory = 64*1e3; // 64KB
+    int numBlocks = 12;
+    int shared_memory = 65536;
 
     cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
     cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);

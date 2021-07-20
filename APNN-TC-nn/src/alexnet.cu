@@ -80,9 +80,7 @@ int main()
 
     //================ Setup Kernel =================
     int numThreads = 512;
-    int numBlocks = 8; // deviceProp.multiProcessorCount;
-    cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, dev);
+    int numBlocks = 8;
     int shared_memory = 65536; // 64KB
 
     std::clock_t c_start = std::clock();

@@ -127,8 +127,8 @@ int main()
     //================ Setup Kernel =================
     int numThreads = 512;
     int numBlocks = 16;
-    int shared_memory = 65536; // 64KB
-
+    int shared_memory = 65536; 
+    
     cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
     cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
     cudaFuncSetAttribute(Output_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
