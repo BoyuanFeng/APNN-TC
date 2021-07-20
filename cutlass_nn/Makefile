@@ -12,28 +12,24 @@ FLAG = -std=c++11 -O3 -w -arch=sm_86
 
 DEP = src/gemm.cuh src/config.h src/layer.cuh
 
-all: alexnet  \
-	 vgg_variant \
-	 resnet18
+all: alexnet.bin  \
+	 vgg_variant.bin \
+	 resnet18.bin
 
-alexnet: src/alexnet.cu $(DEP)
+alexnet.bin: src/alexnet.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
-alexnet_old: src/alexnet_old.cu $(DEP)
+alexnet_old.bin: src/alexnet_old.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
-vgg_variant: src/vgg_variant.cu $(DEP)
+vgg_variant.bin: src/vgg_variant.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
-resnet18: src/resnet18.cu $(DEP)
+resnet18.bin: src/resnet18.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
 test_layer: src/test_layer.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
 clean:
-	rm -r alexnet_old \
-		  alexnet \
-		  vgg_variant \
-		  resnet18 \
-		  test_layer
+	rm -rf *.bin

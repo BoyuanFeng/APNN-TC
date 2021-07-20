@@ -2,3 +2,4 @@ archived-old/
 *archived*
 *bench_conv*
 *bench_gemm*
+*.bin
