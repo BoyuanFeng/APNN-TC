@@ -57,8 +57,8 @@ fp32 data by using NVIDIA Ampere architecture.
 
 // #define BIT_WIDTH 16s
 // #define BIT_WIDTH 8
-// #define BIT_WIDTH 4
-#define BIT_WIDTH 1
+#define BIT_WIDTH 4
+// #define BIT_WIDTH 1
 
 #if BIT_WIDTH == 32
   typedef float input_t;

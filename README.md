@@ -107,3 +107,73 @@ docker run -it --rm --gpus all -v $(PWD):/apnn-tc happy233/apnn-tc:main /bin/bas
 + Run `./alexnet` to run AlexNet in (FP32, FP16, INT8).
 + Run `./vgg_variant` to run VGG-variant in (FP32, FP16, INT8).
 + Run `./resnet18` to run ResNet18 in (FP32, FP16, INT8).
+
+# Expected Result.
+## APNN-TC vs CUTLASS on GEMM kernel. 
++ cutlass-GEMM-int4
+```
+CUTLASS-GEMM (4-bit). M:     64, N:    128, K:    128,   Time (ms): 0.01, TOPS: 0.35
+CUTLASS-GEMM (4-bit). M:     64, N:    256, K:    256,   Time (ms): 0.01, TOPS: 1.14
+CUTLASS-GEMM (4-bit). M:     64, N:    384, K:    384,   Time (ms): 0.01, TOPS: 2.21
+CUTLASS-GEMM (4-bit). M:     64, N:    512, K:    512,   Time (ms): 0.01, TOPS: 3.43
+CUTLASS-GEMM (4-bit). M:     64, N:    640, K:    640,   Time (ms): 0.01, TOPS: 4.77
+CUTLASS-GEMM (4-bit). M:     64, N:    768, K:    768,   Time (ms): 0.01, TOPS: 6.20
+CUTLASS-GEMM (4-bit). M:     64, N:    896, K:    896,   Time (ms): 0.01, TOPS: 7.67
+CUTLASS-GEMM (4-bit). M:     64, N:   1024, K:   1024,   Time (ms): 0.01, TOPS: 9.18
+```
++ APNN-TC-GEMM-w1a2
+```
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 128, K_GLOBAL: 128, X_BIT: 2, W_BIT: 1, Time: 0.004708 ms, TOPS: 0.45
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 256, K_GLOBAL: 256, X_BIT: 2, W_BIT: 1, Time: 0.004964 ms, TOPS: 1.69
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 384, K_GLOBAL: 384, X_BIT: 2, W_BIT: 1, Time: 0.005370 ms, TOPS: 3.52
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 512, K_GLOBAL: 512, X_BIT: 2, W_BIT: 1, Time: 0.005512 ms, TOPS: 6.09
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 640, K_GLOBAL: 640, X_BIT: 2, W_BIT: 1, Time: 0.006140 ms, TOPS: 8.54
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 768, K_GLOBAL: 768, X_BIT: 2, W_BIT: 1, Time: 0.006171 ms, TOPS: 12.23
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 896, K_GLOBAL: 896, X_BIT: 2, W_BIT: 1, Time: 0.006805 ms, TOPS: 15.10
+V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 1024, K_GLOBAL: 1024, X_BIT: 2, W_BIT: 1, Time: 0.007194 ms, TOPS: 18.66
+```
+
+## APNN-TC vs CUTLASS on CONV kernel. 
++ cutlass-CONV-int4 
+```
+Precision,Layer,N,H,W,C,K,R,S,Runtime,TFLOPs
+BIT_WIDTH-4,conv_1,1,16,16,128,128,3,3,0.0144896,5.21046
+BIT_WIDTH-4,conv_2,1,16,16,256,256,3,3,0.0231424,13.0492
+BIT_WIDTH-4,conv_3,1,16,16,384,384,3,3,0.0317024,21.433
+BIT_WIDTH-4,conv_4,1,16,16,512,512,3,3,0.0400528,30.1592
+BIT_WIDTH-4,conv_5,1,16,16,640,640,3,3,0.04864,38.8042
+BIT_WIDTH-4,conv_6,1,16,16,768,768,3,3,0.0572416,47.4814
+BIT_WIDTH-4,conv_7,1,16,16,896,896,3,3,0.0657408,56.2721
+BIT_WIDTH-4,conv_8,1,16,16,1024,1024,3,3,0.0742912,65.0392
+```
++ APNN-TC-CONV-w1a2
+```
+H: 16, W: 16, CIN: 128, COUT: 128, W_BIT: 1, X_BIT: 2, Time: 0.006213 ms, TOPS: 12.15
+H: 16, W: 16, CIN: 256, COUT: 256, W_BIT: 1, X_BIT: 2, Time: 0.008126 ms, TOPS: 37.16
+H: 16, W: 16, CIN: 384, COUT: 384, W_BIT: 1, X_BIT: 2, Time: 0.010251 ms, TOPS: 66.29
+H: 16, W: 16, CIN: 512, COUT: 512, W_BIT: 1, X_BIT: 2, Time: 0.010370 ms, TOPS: 116.48
+H: 16, W: 16, CIN: 640, COUT: 640, W_BIT: 1, X_BIT: 2, Time: 0.013166 ms, TOPS: 143.35
+H: 16, W: 16, CIN: 768, COUT: 768, W_BIT: 1, X_BIT: 2, Time: 0.024899 ms, TOPS: 109.16
+H: 16, W: 16, CIN: 896, COUT: 896, W_BIT: 1, X_BIT: 2, Time: 0.028499 ms, TOPS: 129.81
+H: 16, W: 16, CIN: 1024, COUT: 1024, W_BIT: 1, X_BIT: 2, Time: 0.025389 ms, TOPS: 190.31
+```
+
+## APNN-TC vs CUTLASS on NN model. 
+|                | AlexNet(ms) | VGG(ms)    | ResNet(ms) |
+|----------------|---------|--------|--------|
+| cutlass-32     |    4.26 |  25.22 |  61.70 |
+| cutlass-16     |    3.79 |  24.19 |  57.59 |
+| APNN-TC-w1a2   |    0.36 |   1.66 |   0.63 |
+| Speedup (FP32) |  11.71x | 15.24x | 97.48x |
+| Speedup (FP16) |  10.40x | 14.62x | 90.98x |
+
+
+## Observations.
++ In the CUTLASS NN model with small batch (e.g,, 8), INT8 is not as fast as FP32 and FP16. This is because of small overall computation under the small batch cases. While for larger batch (e.g., 256) with more computations, INT8 would demonstrate its advantage for high throughput.
+> 
+> |      | VGG-variant-b256 (ms) |
+> |------|-----------------:|
+> | FP32 |          628.254 |
+> | FP16 |          540.707 |
+> | INT8 |          368.626 |
++ Compared with the results in our paper (at the time of submission), we found that both the CUTLASS and APNN-TC performance has improved significantly, while the overall speedup trend is similar. **We will revise our paper with the improved design latency performance in the final version of our paper**.

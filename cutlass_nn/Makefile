@@ -23,7 +23,7 @@ vgg_variant.bin: src/vgg_variant.cu $(DEP)
 	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
 resnet18.bin: src/resnet18.cu $(DEP)
-	nvcc $(INC) $(LIB) $(FLAG) --maxrregcount=32 $< -o $@ $(LK)
+	nvcc $(INC) $(LIB) $(FLAG) $< -o $@ $(LK)
 
 clean:
 	rm -rf *.bin

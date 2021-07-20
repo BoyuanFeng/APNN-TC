@@ -136,8 +136,8 @@ compare if the output from CUTLASS kernel is same as the reference implicit GEMM
 // #define batch_512
 
 
-#define BIT_WIDTH 1
-// #define BIT_WIDTH 4
+// #define BIT_WIDTH 1
+#define BIT_WIDTH 4
 // #define BIT_WIDTH 8
 // #define BIT_WIDTH 16
 
