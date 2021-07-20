@@ -125,8 +125,10 @@ int main()
     Out128LayerParam* bout_gpu = bout->initialize(config_file, bfc2->get_output_gpu());  
 
     //================ Setup Kernel =================
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, dev);
     int numThreads = 512;
-    int numBlocks = 16;
+    int numBlocks = deviceProp.multiProcessorCount; // 16;
     int shared_memory = 65536; 
     
     cudaFuncSetAttribute(Conv_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
