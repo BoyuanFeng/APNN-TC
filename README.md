@@ -159,19 +159,20 @@ H: 16, W: 16, CIN: 1024, COUT: 1024, W_BIT: 1, X_BIT: 2, Time: 0.025389 ms, TOPS
 ```
 
 ## APNN-TC vs CUTLASS on NN model. 
-|                | AlexNet(ms) | VGG(ms)    | ResNet(ms) |
-|----------------|---------|--------|--------|
-| cutlass-32     |    4.26 |  25.22 |  61.70 |
-| cutlass-16     |    3.79 |  24.19 |  57.59 |
-| APNN-TC-w1a2   |    0.36 |   1.66 |   0.63 |
-| Speedup (FP32) |  11.71x | 15.24x | 97.48x |
-| Speedup (FP16) |  10.40x | 14.62x | 90.98x |
++ Here we demonstrate an example with `APNN-w1a2` and `cutlass-FP32` and `cutlass-fp16` on `AlexNet` and `VGG_variant`.
+|                | AlexNet(ms) | VGG(ms)    |
+|:----------------|---------:|--------:|
+| cutlass-32     |    4.26 |  25.22 |
+| cutlass-16     |    3.79 |  24.19 |
+| APNN-TC-w1a2   |    0.36 |   1.66 |
+| Speedup (FP32) |  11.71x | 15.24x |
+| Speedup (FP16) |  10.40x | 14.62x |
 
 
 ## Observations.
 + In the CUTLASS NN model with small batch (e.g,, 8), INT8 is not as fast as FP32 and FP16. This is because of small overall computation under the small batch cases. While for larger batch (e.g., 256) with more computations, INT8 would demonstrate its advantage for high throughput.
 > 
-> |      | VGG-variant-b256 (ms) |
+> |      | CUTLASS-VGG-variant-b256 (ms) |
 > |------|-----------------:|
 > | FP32 |          628.254 |
 > | FP16 |          540.707 |
