@@ -57,21 +57,21 @@ docker run -it --rm --gpus all -v $(PWD):/apnn-tc happy233/apnn-tc:main /bin/bas
 # Experiments
 ## APNN-TC -- GEMM and CONV kernel
 + `cd APNN-TC-kernel && make`
-+ Run `./gemm-w1a2`, `./gemm-w1a3`,`./gemm-w1a4`,`./gemm-w2a2`.
-+ Run `./conv-w1a2`, `./conv-w1a3`, `./conv-w1a4_small`, `./conv-w1a4_large`,`./conv-w2a2_small`, `./conv-w2a2_large`
++ Run `./gemm-w1a2.out`, `./gemm-w1a3.out`,`./gemm-w1a4.out`,`./gemm-w2a2.out`. Note that `w1a2` means 1-bit weight and 2-bit activation.
++ Run `./conv-w1a2.out`, `./conv-w1a3.out`, `./conv-w1a4_small.out`, `./conv-w1a4_large.out`,`./conv-w2a2_small.out`, `./conv-w2a2_large.out`
 > Note that 
 > + for GEMM kernel, we profile the GEMM shape as `[M, N, K]` as `[64, N, K]`, where `N=K=[128,256,384,...,1024]`.
 > + for CONV kernel, we profile the CONV shape with on feature map with `[H, W] = [16,16]` and the kernel size is `[O, C, K, K] = [O, C, 3, 3]`, where `O=C=[128,256,384,...,1024]`. 
-> + `conv-w1a4_small` is for `w1a4` in `IN=COUT=[128,..., 640]`, 
-> + `conv-w1a4_large` is for `w1a4` in `IN=COUT>=640`
-> + `conv-w2a2_small` is for `w2a2` in `IN=COUT=[128,..., 640]`
-> + `conv-w2a2_large` is for `w2a2` in `IN=COUT>=640`
+> + `conv-w1a4_small.out` is for `w1a4` in `IN=COUT=[128,..., 640]`, 
+> + `conv-w1a4_large.out` is for `w1a4` in `IN=COUT>=640`
+> + `conv-w2a2_small.out` is for `w2a2` in `IN=COUT=[128,..., 640]`
+> + `conv-w2a2_large.out` is for `w2a2` in `IN=COUT>=640`
 
 ## CUTLASS -- GEMM kernel
 + `cd bench_cutlass/`
 + `make all`
 + `./run-gemm.py`
-+  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_gemm.cu` and comment out other unused bitwidth (default is 4-bit).
++  Select the precision (`INT4` and `INT1`) of CUTLASS, open **`cutlass_kernel/bench_gemm.cu`** and comment out other unused bitwidth (default 4-bit).
 ```
 // #define BIT_WIDTH 1
 #define BIT_WIDTH 4
@@ -81,7 +81,7 @@ docker run -it --rm --gpus all -v $(PWD):/apnn-tc happy233/apnn-tc:main /bin/bas
 + `cd bench_cutlass/`
 + `make all`
 + `./run-conv.py`
-+  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_conv.cu` and comment out other unused bitwidth (default is 4-bit).
++  Select the precision (`INT4` and `INT1`) of CUTLASS, open **`cutlass_kernel/bench_conv.cu`** and comment out other unused bitwidth (default 4-bit).
 ```
 // #define BIT_WIDTH 1
 #define BIT_WIDTH 4
