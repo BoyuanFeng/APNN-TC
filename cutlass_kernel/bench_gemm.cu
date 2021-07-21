@@ -52,10 +52,10 @@ fp32 data by using NVIDIA Ampere architecture.
 #include "helper.h"
 #include <cutlass/numeric_types.h>
 
-#define NUM_PROFILE 1000 
+#define NUM_PROFILE 200 
 
 
-// #define BIT_WIDTH 16s
+// #define BIT_WIDTH 16
 // #define BIT_WIDTH 8
 #define BIT_WIDTH 4
 // #define BIT_WIDTH 1

@@ -15,4 +15,4 @@ N_K_list = [
 ]
 
 for N_K in N_K_list:
-    os.system("./bench_gemm {} {} {}".format(B, N_K, N_K))
+    os.system("./bench_gemm.bin {} {} {}".format(B, N_K, N_K))

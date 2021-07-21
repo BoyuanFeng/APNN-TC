@@ -522,7 +522,7 @@ struct Options {
   }
 
   /// Compute performance in GFLOP/s
-  double gflops(double runtime_s) const {
+  double tflops(double runtime_s) const {
 
     // Number of multiply-adds = NPQK * CRS
     int64_t fmas = output_size().product() * int64_t(filter_size.h() * filter_size.w() * filter_size.c());
@@ -536,14 +536,14 @@ struct Options {
 
 struct Result {
   double runtime_ms;
-  double gflops;
+  double tflops;
   cutlass::Status status;
   cutlass::Status reference_check;
   cudaError_t error;
 
   Result(): 
     runtime_ms(0), 
-    gflops(0),
+    tflops(0),
     status(cutlass::Status::kSuccess),
     reference_check(cutlass::Status::kInvalid),
     error(cudaSuccess) { }
@@ -554,7 +554,7 @@ struct Result {
       out << "Name,";
     }
 
-    out << "Precision,Layer,N,H,W,C,K,R,S,Runtime,TFLOPs";
+    out << "Precision,\tLayer,\tN,\tH,\tW,\tC,\tK,\tR,\tS,\tRuntime,\tTFLOPs";
 
     return out;
   }
@@ -566,16 +566,16 @@ struct Result {
     }
 
     out << "BIT_WIDTH-" << BIT_WIDTH << ","
-      << "conv_" << idx << ","
-      << options.input_size.n() << ","
-      << options.input_size.h() << ","
-      << options.input_size.w() << ","
-      << options.input_size.c() << ","
-      << options.filter_size.n() << ","
-      << options.filter_size.h() << ","
-      << options.filter_size.w() << ","
-      << runtime_ms << ","
-      << gflops;
+      << "\tconv_" << idx << ",\t"
+      << options.input_size.n() << ",\t"
+      << options.input_size.h() << ",\t"
+      << options.input_size.w() << ",\t"
+      << options.input_size.c() << ",\t"
+      << options.filter_size.n() << ",\t"
+      << options.filter_size.h() << ",\t"
+      << options.filter_size.w() << ",\t"
+      << runtime_ms << ",\t"
+      << tflops;
 
     return out;
   }
@@ -814,9 +814,9 @@ Result profile_convolution(Options const &options) {
       return result;
     }
 
-    // Print average runtime and GFLOPs.
+    // Print average runtime and tflops.
     result.runtime_ms = double(runtime_ms) / double(options.iterations);
-    result.gflops = options.gflops(result.runtime_ms / 1000.0);
+    result.tflops = options.tflops(result.runtime_ms / 1000.0);
 
     // Cleanup
     for (auto event : events) {

@@ -71,20 +71,20 @@ docker run -it --rm --gpus all -v $(PWD):/apnn-tc happy233/apnn-tc:main /bin/bas
 + `cd bench_cutlass/`
 + `make all`
 + `./run-gemm.py`
-+  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_gemm.cu` and comment out other unused bitwidth.
++  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_gemm.cu` and comment out other unused bitwidth (default is 4-bit).
 ```
-#define BIT_WIDTH 1
-// #define BIT_WIDTH 4
+// #define BIT_WIDTH 1
+#define BIT_WIDTH 4
 ```
 
 ## CUTLASS -- CONV kernel
 + `cd bench_cutlass/`
 + `make all`
 + `./run-conv.py`
-+  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_conv.cu` and comment out other unused bitwidth.
++  Select the precision (`INT4` and `INT1`) of CUTLASS, `cd cutlass_kernel/bench_conv.cu` and comment out other unused bitwidth (default is 4-bit).
 ```
-#define BIT_WIDTH 1
-// #define BIT_WIDTH 4
+// #define BIT_WIDTH 1
+#define BIT_WIDTH 4
 ```
 
 ## APNN-TC -- NN model  
@@ -136,15 +136,15 @@ V30, 64x64. M_GLOBAL: 64, N_GLOBAL: 1024, K_GLOBAL: 1024, X_BIT: 2, W_BIT: 1, Ti
 ## APNN-TC vs CUTLASS on CONV kernel. 
 + cutlass-CONV-int4 
 ```
-Precision,Layer,N,H,W,C,K,R,S,Runtime,TFLOPs
-BIT_WIDTH-4,conv_1,1,16,16,128,128,3,3,0.0144896,5.21046
-BIT_WIDTH-4,conv_2,1,16,16,256,256,3,3,0.0231424,13.0492
-BIT_WIDTH-4,conv_3,1,16,16,384,384,3,3,0.0317024,21.433
-BIT_WIDTH-4,conv_4,1,16,16,512,512,3,3,0.0400528,30.1592
-BIT_WIDTH-4,conv_5,1,16,16,640,640,3,3,0.04864,38.8042
-BIT_WIDTH-4,conv_6,1,16,16,768,768,3,3,0.0572416,47.4814
-BIT_WIDTH-4,conv_7,1,16,16,896,896,3,3,0.0657408,56.2721
-BIT_WIDTH-4,conv_8,1,16,16,1024,1024,3,3,0.0742912,65.0392
+Precision,      Layer,  N,      H,      W,      C,      K,      R,      S,      Runtime,        TFLOPs
+BIT_WIDTH-4,    conv_1, 1,      16,     16,     128,    128,    3,      3,      0.0144896,      5.21046
+BIT_WIDTH-4,    conv_2, 1,      16,     16,     256,    256,    3,      3,      0.02304,        13.1072
+BIT_WIDTH-4,    conv_3, 1,      16,     16,     384,    384,    3,      3,      0.031592,       21.5079
+BIT_WIDTH-4,    conv_4, 1,      16,     16,     512,    512,    3,      3,      0.0401408,      30.0931
+BIT_WIDTH-4,    conv_5, 1,      16,     16,     640,    640,    3,      3,      0.04864,        38.8042
+BIT_WIDTH-4,    conv_6, 1,      16,     16,     768,    768,    3,      3,      0.0572416,      47.4814
+BIT_WIDTH-4,    conv_7, 1,      16,     16,     896,    896,    3,      3,      0.065792,       56.2284
+BIT_WIDTH-4,    conv_8, 1,      16,     16,     1024,   1024,   3,      3,      0.0743424,      64.9944
 ```
 + APNN-TC-CONV-w1a2
 ```
