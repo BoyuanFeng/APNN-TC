@@ -4,6 +4,7 @@
 ## Clone this project.
 ```
 git clone --recursive git@github.com:BoyuanFeng/APNN-TC.git
+cd APNN-TC-kernel && git checkout main
 ```
 in case of missing `--recursive` during the clone
 ```
