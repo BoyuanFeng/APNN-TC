@@ -160,6 +160,7 @@ H: 16, W: 16, CIN: 1024, COUT: 1024, W_BIT: 1, X_BIT: 2, Time: 0.025389 ms, TOPS
 
 ## APNN-TC vs CUTLASS on NN model. 
 + Here we demonstrate an example with `APNN-w1a2` and `cutlass-FP32` and `cutlass-fp16` on `AlexNet` and `VGG_variant`.
+
 |                | AlexNet(ms) | VGG(ms)    |
 |:----------------|---------:|--------:|
 | cutlass-32     |    4.26 |  25.22 |
