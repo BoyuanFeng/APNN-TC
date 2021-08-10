@@ -170,7 +170,6 @@ H: 16, W: 16, CIN: 1024, COUT: 1024, W_BIT: 1, X_BIT: 2, Time: 0.025389 ms, TOPS
 | Speedup (FP32) |  11.71x | 15.24x |
 | Speedup (FP16) |  10.40x | 14.62x |
 
-
 ## Observations.
 + In the CUTLASS NN model with small batch (e.g,, 8), INT8 is not as fast as FP32 and FP16. This is because of small overall computation under the small batch cases. While for larger batch (e.g., 256) with more computations, INT8 would demonstrate its advantage for high throughput.
 > 
@@ -180,3 +179,18 @@ H: 16, W: 16, CIN: 1024, COUT: 1024, W_BIT: 1, X_BIT: 2, Time: 0.025389 ms, TOPS
 > | FP16 |          540.707 |
 > | INT8 |          368.626 |
 + Compared with the results in our paper (at the time of submission), we found that both the CUTLASS and APNN-TC performance has improved significantly, while the overall speedup trend is similar. **We will revise our paper with the improved design latency performance in the final version of our paper**.
+
+## BNN for NN model.
++ `cd bnn_baseline`
++ `make`
++ `./alexnet.bin`
++ `./vgg.bin`
++ `./resnet.bin`
+
+|         | Current | Table-2 |
+|--------:|--------:|--------:|
+| AlexNet |   0.631 |    0.69 |
+|     VGG |   2.233 |    2.17 |
+|  ResNet |   0.733 |    0.68 |
+
+Note that for the BNN-based NN model we use in our paper submission, we adopt the design from this [TCBNN](https://github.com/pnnl/TCBNN) (from TPDS-20) for the state-of-the-art BNN implementation on GPU tensor core, which can match the number in the Table-2.
