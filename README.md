@@ -180,7 +180,7 @@ H: 16, W: 16, CIN: 1024, COUT: 1024, W_BIT: 1, X_BIT: 2, Time: 0.025389 ms, TOPS
 > | INT8 |          368.626 |
 + Compared with the results in our paper (at the time of submission), we found that both the CUTLASS and APNN-TC performance has improved significantly, while the overall speedup trend is similar. **We will revise our paper with the improved design latency performance in the final version of our paper**.
 
-## BNN for NN model.
+## [*Updated*] BNN for NN model.
 + `cd bnn_baseline`
 + `make`
 + `./alexnet.bin`
@@ -194,3 +194,34 @@ H: 16, W: 16, CIN: 1024, COUT: 1024, W_BIT: 1, X_BIT: 2, Time: 0.025389 ms, TOPS
 |  ResNet |   0.733 |    0.68 |
 
 Note that for the BNN-based NN model we use in our paper submission, we adopt the design from this [TCBNN](https://github.com/pnnl/TCBNN) (from TPDS-20) for the state-of-the-art BNN implementation on GPU tensor core, which can match the number in the Table-2.
+
+
+## [*Updated*] APNN-TC NN model layer-wise latency breakdown.
++  We update our NN model source and enable the layer-wise latency breakdown.
++ `cd APNN-TC-nn/`
++ `make`
++ `./alexnet.bin`
++ `./vgg_variant.bin`
++ `./resnet.bin`
++ Example output for `AlexNet`
+```
+Conv1, 224, 224, 3, 64, 11, 11
+Conv2, 28, 28, 64, 192, 5, 5
+Conv3, 14, 14, 192, 384, 3, 3
+Conv4, 14, 14, 384, 256, 3, 3
+Conv5, 14, 14, 256, 256, 3, 3
+Fc1, 12544, 4096
+Fc2, 4096, 4096
+Fout, 4096, 1000
+
+==============
+AlexNet (ms): 0.372
+AlexNet Layer-0 (ms): 0.241
+AlexNet Layer-1 (ms): 0.018
+AlexNet Layer-2 (ms): 0.003
+AlexNet Layer-3 (ms): 0.046
+AlexNet Layer-4 (ms): 0.023
+AlexNet Layer-5 (ms): 0.010
+AlexNet Layer-6 (ms): 0.007
+AlexNet Layer-7 (ms): 0.009
+```

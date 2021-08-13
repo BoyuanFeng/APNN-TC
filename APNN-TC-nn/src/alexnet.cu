@@ -13,6 +13,8 @@
 #include "kernel.cuh"
 #include "data.h"
 
+#define layer_timing
+
 using namespace std;
 
 int main()
@@ -91,22 +93,73 @@ int main()
     cudaFuncSetAttribute(FC_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
     cudaFuncSetAttribute(Output_new_global, cudaFuncAttributeMaxDynamicSharedMemorySize, shared_memory);
 
-    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
-    cudaDeviceSynchronize(); 
-    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv2_gpu);
-    cudaDeviceSynchronize(); 
-    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv3_gpu);
-    cudaDeviceSynchronize(); 
-    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv4_gpu);
-    cudaDeviceSynchronize(); 
-    Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv5_gpu);
-    cudaDeviceSynchronize(); 
-    FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
-    cudaDeviceSynchronize(); 
-    FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc2_gpu);
-    cudaDeviceSynchronize(); 
-    Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
-    cudaDeviceSynchronize(); 
+    #ifdef layer_timing
+        std::vector<std::clock_t> layer_time;
+        std::clock_t t1 = std::clock();
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
+        cudaDeviceSynchronize(); 
+        std::clock_t t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+        t1 = std::clock();
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv2_gpu);
+        cudaDeviceSynchronize(); 
+        t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+        t1 = std::clock();
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv3_gpu);
+        t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+        t1 = std::clock();
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv4_gpu);
+        cudaDeviceSynchronize(); 
+        t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+        t1 = std::clock();
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv5_gpu);
+        cudaDeviceSynchronize(); 
+        t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+        t1 = std::clock();
+        FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
+        cudaDeviceSynchronize(); 
+        t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+        t1 = std::clock();
+        FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc2_gpu);
+        cudaDeviceSynchronize(); 
+        t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+        t1 = std::clock();
+        Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
+        cudaDeviceSynchronize(); 
+        t2 = std::clock();
+        layer_time.push_back(t2 - t1);
+
+    #else
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv1_gpu);
+        cudaDeviceSynchronize(); 
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv2_gpu);
+        cudaDeviceSynchronize(); 
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv3_gpu);
+        cudaDeviceSynchronize(); 
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv4_gpu);
+        cudaDeviceSynchronize(); 
+        Conv_new_global<<<numBlocks, numThreads, shared_memory>>>(bconv5_gpu);
+        cudaDeviceSynchronize(); 
+        FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc1_gpu);
+        cudaDeviceSynchronize(); 
+        FC_new_global<<<numBlocks, numThreads, shared_memory>>>(bfc2_gpu);
+        cudaDeviceSynchronize(); 
+        Output_new_global<<<numBlocks, numThreads, shared_memory>>>(bout_gpu);
+        cudaDeviceSynchronize(); 
+    #endif
 
     cudaError_t err = cudaGetLastError();
 
@@ -114,6 +167,14 @@ int main()
     float time_elapsed_ms = 1000.0f * (c_end-c_start) / CLOCKS_PER_SEC;
     printf("\n==============\nAlexNet (ms): %.3f\n", time_elapsed_ms);
 
+
+    #ifdef layer_timing
+    for (int idx = 0; idx < layer_time.size(); idx++)
+    {
+        float time_elapsed_ms = 1000.0f * layer_time[idx] / CLOCKS_PER_SEC;
+        printf("AlexNet Layer-%d (ms): %.3f\n", idx, time_elapsed_ms);
+    }
+    #endif
 
     if ( err != cudaSuccess ){
        printf("CUDA Error: %s\n", cudaGetErrorString(err));       
