@@ -1,4 +1,5 @@
 # APNN-TC: Accelerating Arbitrary Precision Neural Networks on Ampere GPU Tensor Cores
+[**[Paper on arXiv]**](https://arxiv.org/abs/2106.12169)
 ```
 @inproceedings{APNN-TC,
   title={APNN-TC: Accelerating Arbitrary Precision Neural Networks on Ampere GPU Tensor Cores},
