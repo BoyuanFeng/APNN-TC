@@ -13,7 +13,7 @@
 #include "kernel.cuh"
 #include "data.h"
 
-#define layer_timing
+// #define layer_timing
 
 using namespace std;
 

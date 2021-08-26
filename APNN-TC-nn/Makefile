@@ -1,5 +1,5 @@
 NVCC = nvcc
-NVCC_FLAG = -std=c++11 -O3 -w  -arch=sm_86 -rdc=true --maxrregcount=64
+NVCC_FLAG = -std=c++11 -O3 -w  -arch=sm_86 -rdc=true 
 LIBS = -ljpeg
 INC = -I../APNN-TC-lib/bmmaTensorCoreGemm/src \
 	-I../APNN-TC-lib/Common

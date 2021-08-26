@@ -9,7 +9,6 @@
 
 #include "param.h"
 
-#define w1a2
 #define w_bit 1
 #define a_bit 2
 #include "67_bmmaTensorCoreGemm.cuh" // for w1a2 CONV
@@ -148,7 +147,7 @@ uin32* images_quantization(float* images, int batch, int image_width,
     Quantize_val<<<grid_size, block_size>>>(quant_images_gpu, images_gpu, total_size, bit);
 
     // Low-bit compression.
-    SAFE_ALOC_GPU(bit_images_gpu, bit*total_size*PAD128(image_channel)*sizeof(uin32)/32);
+    SAFE_ALOC_GPU(bit_images_gpu, bit*batch*image_height*image_width*PAD128(image_channel)*sizeof(uin32)/32);
     block_size = 1024;
     grid_size = (batch*image_height*image_width*32 + block_size - 1)/block_size;
     Bit_compression<<<grid_size, block_size>>>(bit_images_gpu, quant_images_gpu, \
@@ -299,22 +298,8 @@ void Conv_new(Conv128LayerParam* p){
 
 __global__ 
 void Output_new_global(Out128LayerParam* p){
-    #ifdef w1a2
-    // compute_gemm_imma((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, \
-    //                     STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width)); 
     apmm_w1a2_decompose((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
                         8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 1, 2);
-    #endif
-
-    #ifdef w2a2
-    apmm_w2a2_decompose((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
-    8*(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 2, 2);
-    #endif
-
-    #ifdef w2a8
-    apmm_w2a8((const int4*) p->input_gpu, (const int4*) p->weight_gpu, (int*) p->output_gpu, 
-    8*STEP8(p->input_height), STEP8(p->weight_width), STEP128(p->input_width), 2, 8);
-    #endif
 }
 
 
