@@ -1,5 +1,12 @@
-# APNN-TC for SC21
-
+# APNN-TC: Accelerating Arbitrary Precision Neural Networks on Ampere GPU Tensor Cores
+```
+@inproceedings{APNN-TC,
+  title={APNN-TC: Accelerating Arbitrary Precision Neural Networks on Ampere GPU Tensor Cores},
+  author={Boyuan Feng, Yuke Wang, Tong Geng, Ang Li, Yufei Ding.},
+  booktitle={The International Conference for High Performance Computing, Networking, Storage, and Analysis. (SC'21)},
+  year={2021}
+}
+```
 
 ## Clone this project.
 ```
